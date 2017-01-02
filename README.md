@@ -77,7 +77,8 @@ En Debian se pueden instalar las dependencias con:
 
 Si se está instalando desde el repositorio git, ejecutar la primera vez:
 
-    git clone
+    git clone https://github.com/fdelapena/firmador.git
+    cd firmador
     autoreconf -i
 
 Para compilar:
