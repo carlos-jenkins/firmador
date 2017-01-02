@@ -1,0 +1,18 @@
+EXTRA_DIST = README.md
+
+bin_PROGRAMS = firmador
+
+firmador_SOURCES = \
+	src/firmador.cpp
+
+firmador_CXXFLAGS = \
+	-I$(srcdir)/src \
+	$(GNUTLS_CFLAGS) \
+	$(MICROHTTPD_CFLAGS) \
+	$(WX_CFLAGS)
+
+firmador_LDADD = \
+	$(GNUTLS_LIBS) \
+	$(MICROHTTPD_LIBS) \
+	$(WX_LIBS)
+
