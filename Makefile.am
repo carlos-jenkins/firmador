@@ -6,6 +6,7 @@ firmador_SOURCES = \
 	src/firmador.cpp
 
 firmador_CXXFLAGS = \
+	-Wall -Wextra -ansi -pedantic \
 	-I$(srcdir)/src \
 	$(GNUTLS_CFLAGS) \
 	$(MICROHTTPD_CFLAGS) \
