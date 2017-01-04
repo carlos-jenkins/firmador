@@ -232,7 +232,6 @@ int main() {
 			if (keyusage & GNUTLS_KEY_NON_REPUDIATION) {
 				printf("La clave del identificador %lu, certificado %lu es adecuada para firmar porque tiene uso 'no repudio'.\n",
 					i, j);
-
 			}
 			gnutls_x509_crt_deinit(cert);
 		}
@@ -242,6 +241,10 @@ int main() {
 		for (size_t j = 0; j < token_obj_lists_sizes.at(i); j++) {
 			gnutls_pkcs11_obj_deinit(token_obj_lists.at(i)[j]);
 		}
+	}
+
+	if (obj_list_size > 0) {
+		gnutls_free(obj_list);
 	}
 
 	gnutls_pkcs11_deinit();
