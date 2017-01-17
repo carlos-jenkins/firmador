@@ -20,12 +20,16 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <map>
 #include <string>
 #include <vector>
 #include <gnutls/pkcs11.h>
 #include <gnutls/abstract.h>
 /* FIXME: Es de POSIX, reemplazar luego con wxPasswordEntryDialog */
 #include <unistd.h>
+#include "firmador.h"
+
+wxIMPLEMENT_APP(Firmador);
 
 static int pin_callback(void *user, int attempt, const char *token_url,
 	const char *token_label, unsigned int flags, char *pin,
@@ -60,7 +64,7 @@ static int pin_callback(void *user, int attempt, const char *token_url,
 	return 0;
 }
 
-int main() {
+bool Firmador::OnInit() {
 
 	gnutls_pkcs11_set_pin_function(pin_callback, NULL);
 
@@ -74,7 +78,11 @@ int main() {
 		exit(ret);
 	}
 
-	/* Ruta a la libreria PKCS #11 o al nombre del modulo en p11-kit */
+	/*
+	 * Ruta a la libreria PKCS #11 o al nombre del modulo en p11-kit.
+	 * Si la libreria es privativa no afecta al programa GPL porque
+	 * se encarga p11-kit de manejarlo.
+	 */
 	ret = gnutls_pkcs11_add_provider("libASEP11.so", NULL);
 
 	if (ret < GNUTLS_E_SUCCESS) {
@@ -113,8 +121,10 @@ int main() {
 	std::vector<unsigned int> token_obj_lists_sizes;
 	unsigned int obj_list_size = 0;
 	/*
-	 * Importa todos los objetos de tipo certificado de los tokens
-	 * y los guarda en obj_list, guardando la cantidad en obj_list_size.
+	 * Importa todos los objetos de tipo certificado de los tokens y
+	 * guarda la lista de certificados de cada token en un obj_list,
+	 * guardando la cantidad en obj_list_size y guardando estos de cada
+	 * token en vectores.
 	 */
 	for (size_t i = 0; i < token_urls.size(); i++) {
 		ret = gnutls_pkcs11_obj_list_import_url2(&obj_list,
@@ -123,7 +133,7 @@ int main() {
 
 		if (ret < GNUTLS_E_SUCCESS) {
 			fprintf(stderr,
-				"Error al importar objetos del identificador %lu: %s\n",
+				"Error al importar objetos de tipo certificado del identificador %lu: %s\n",
 				i, gnutls_strerror(ret));
 			exit(ret);
 		}
@@ -131,6 +141,7 @@ int main() {
 		token_obj_lists_sizes.push_back(obj_list_size);
 	}
 
+	std::multimap<std::string, std::string> candidate_certs;
 	/* Muestra los certificados en pantalla. */
 	for (size_t i = 0; i < token_obj_lists_sizes.size(); i++) {
 		for (size_t j = 0; j < token_obj_lists_sizes.at(i); j++) {
@@ -155,8 +166,7 @@ int main() {
 			}
 
 			char givenname[32];
-			size_t givenname_size;
-			givenname_size = sizeof(givenname);
+			size_t givenname_size = sizeof(givenname);
 			gnutls_x509_crt_get_dn_by_oid(cert,
 				GNUTLS_OID_X520_GIVEN_NAME, 0, 0, givenname,
 				&givenname_size);
@@ -169,8 +179,7 @@ int main() {
 			}
 
 			char surname[80];
-			size_t surname_size;
-			surname_size = sizeof(surname);
+			size_t surname_size = sizeof(surname);
 			gnutls_x509_crt_get_dn_by_oid(cert,
 				GNUTLS_OID_X520_SURNAME, 0, 0, surname,
 				&surname_size);
@@ -183,8 +192,7 @@ int main() {
 			}
 
 			char serialnumber[128];
-			size_t serialnumber_size;
-			serialnumber_size = sizeof(serialnumber);
+			size_t serialnumber_size = sizeof(serialnumber);
 			gnutls_x509_crt_get_dn_by_oid(cert, "2.5.4.5", 0, 0,
 				serialnumber, &serialnumber_size);
 
@@ -196,8 +204,7 @@ int main() {
 			}
 
 			char obj_label[384];
-			size_t obj_label_size;
-			obj_label_size = sizeof(obj_label);
+			size_t obj_label_size = sizeof(obj_label);
 			ret = gnutls_pkcs11_obj_get_info(token_obj_lists.at(i)[j],
 				GNUTLS_PKCS11_OBJ_LABEL, obj_label,
 				&obj_label_size);
@@ -232,11 +239,57 @@ int main() {
 			if (keyusage & GNUTLS_KEY_NON_REPUDIATION) {
 				printf("La clave del identificador %lu, certificado %lu es adecuada para firmar porque tiene uso 'no repudio'.\n",
 					i, j);
+				char *obj_url;
+				ret = gnutls_pkcs11_obj_export_url(token_obj_lists.at(i)[j], GNUTLS_PKCS11_URL_GENERIC, &obj_url);
+				if (ret < GNUTLS_E_SUCCESS) {
+					fprintf(stderr,
+						"Error al obtener la URL del certificado %lu del identificador %lu: %s\n",
+						j, i,
+						gnutls_strerror(ret));
+					exit(ret);
+				}
+				candidate_certs.insert(
+					std::pair<std::string, std::string>(
+						token_urls.at(i), obj_url
+					)
+				);
+				gnutls_free(obj_url);
 			}
 			gnutls_x509_crt_deinit(cert);
 		}
 	}
 
+	gnutls_privkey_t key;
+	ret = gnutls_privkey_init(&key);
+
+	if (ret < GNUTLS_E_SUCCESS) {
+		fprintf(stderr, "Error al inicializar la clave privada: %s\n", gnutls_strerror(ret));
+		exit(ret);
+	}
+
+	// TODO: iterar multimap para insertar las cadenas en la listbox
+
+	/*
+	// TODO: tras seleccionarse en el listbox, cargar el token
+	//       correspondiente, esta vez con PIN para poder usar la
+	//       clave privada para poder firmar
+	ret = gnutls_pkcs11_obj_import_url(obj_list[i], url, GNUTLS_PKCS11_OBJ_FLAG_PRIVKEY);
+	if (ret < GNUTLS_E_SUCCESS) {
+		fprintf(stderr, "Error al importar la URL de la clave privada para el certificado %lu: %s\n", i, gnutls_strerror(ret));
+		exit(ret);
+	}
+	*/
+	/*
+	// TODO: firmar datos eventualmente
+	gnutls_datum_t data = {(unsigned char*)"hola", 4};
+	gnutls_datum_t sig;
+	ret = gnutls_privkey_sign_data(key, GNUTLS_DIG_SHA256, 0, &data, &sig);
+
+	if (ret < GNUTLS_E_SUCCESS) {
+		fprintf(stderr, "Error al firmar datos con la clave privada del certificado %lu: %s\n", i, gnutls_strerror(ret));
+		exit(ret);
+	}
+	*/
 	for (size_t i = 0; i < token_obj_lists_sizes.size(); i++) {
 		for (size_t j = 0; j < token_obj_lists_sizes.at(i); j++) {
 			gnutls_pkcs11_obj_deinit(token_obj_lists.at(i)[j]);
@@ -249,5 +302,6 @@ int main() {
 
 	gnutls_pkcs11_deinit();
 
-	return 0;
+	return false; // FIXME: cambiar a true cuando haya GUI
 }
+
