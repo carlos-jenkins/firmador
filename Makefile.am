@@ -3,7 +3,8 @@ EXTRA_DIST = README.md
 bin_PROGRAMS = firmador
 
 firmador_SOURCES = \
-	src/firmador.cpp
+	src/firmador.cpp \
+	src/firmador.h
 
 firmador_CXXFLAGS = \
 	-Wall -Wextra -pedantic \
