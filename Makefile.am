@@ -17,4 +17,3 @@ firmador_LDADD = \
 	$(GNUTLS_LIBS) \
 	$(MICROHTTPD_LIBS) \
 	$(WX_LIBS)
-
