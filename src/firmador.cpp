@@ -58,7 +58,7 @@ static int pin_callback(void *user, int attempt, const char *token_url,
 
 	wxPasswordEntryDialog pinDialog(NULL, warning
 		+ wxT("Introducir el PIN de la tarjeta")
-		+ wxString(token_label) + wxT(":"),
+		+ wxString(token_label, wxConvUTF8) + wxT(":"),
 		wxT("Introducción del PIN"), wxEmptyString,
 		wxTextEntryDialogStyle | wxSTAY_ON_TOP);
 	//int selected_cert;
