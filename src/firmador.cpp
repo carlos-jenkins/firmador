@@ -22,8 +22,6 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 #include <iostream>
 #include <string>
 #include <vector>
-/* FIXME: Es de POSIX, reemplazar luego con wxPasswordEntryDialog */
-#include <unistd.h>
 
 #include <gnutls/pkcs11.h>
 #include <gnutls/abstract.h>
@@ -42,19 +40,35 @@ static int pin_callback(void *user, int attempt, const char *token_url,
 	(void)attempt;
 	(void)token_url;
 
-	if (flags & GNUTLS_PIN_FINAL_TRY)
-		std::cout << "*** ADVERTENCIA: este es el ultimo intento "
-			<< "antes de bloquear la tarjeta!" << std::endl;
-	if (flags & GNUTLS_PIN_COUNT_LOW)
-		std::cout << "*** AVISO: quedan pocos intentos antes de "
-			<< "bloquear la tarjeta!" << std::endl;
-	if (flags & GNUTLS_PIN_WRONG)
-		std::cout << "*** PIN incorrecto" << std::endl;
+	wxString warning = wxT("");
 
-	std::cout << "Identificador: '" << token_label << "'." << std::endl;
-#ifndef _WIN32
-	password = getpass("Introduce el PIN: ");
-#endif
+	if (flags & GNUTLS_PIN_FINAL_TRY) {
+		warning = warning + wxT("ADVERTENCIA: ¡ESTE ES EL ÚLTIMO ")
+			+ wxT("INTENTO ANTES DE BLOQUEAR LA TARJETA!\n\n");
+	}
+
+	if (flags & GNUTLS_PIN_COUNT_LOW) {
+		warning = warning + wxT("AVISO: ¡quedan pocos intentos antes ")
+			+ wxT("de BLOQUEAR la tarjeta!\n\n");
+	}
+
+	if (flags & GNUTLS_PIN_WRONG) {
+		warning = warning + wxT("PIN INCORRECTO\n\n");
+	}
+
+	wxPasswordEntryDialog pinDialog(NULL, warning
+		+ wxT("Introducir el PIN de la tarjeta")
+		+ wxString(token_label) + wxT(":"),
+		wxT("Introducción del PIN"), wxEmptyString,
+		wxTextEntryDialogStyle | wxSTAY_ON_TOP);
+	//int selected_cert;
+	if (pinDialog.ShowModal() == wxID_OK) {
+		std::cout << "PIN: " << pinDialog.GetValue()
+			<< std::endl;
+	} else {
+		exit(1);
+	}
+
 	if (password == NULL || password[0] == 0) {
 		std::cerr << "No se ha introducido ningun valor." << std::endl;
 		exit(1);
@@ -87,7 +101,8 @@ bool Firmador::OnInit() {
 	 * se encarga p11-kit de manejarlo.
 	 */
 #ifdef _WIN32
-	ret = gnutls_pkcs11_add_provider((const) getenv("WINDIR") + "\\system32\\asepkcs11.dll", NULL);
+	ret = gnutls_pkcs11_add_provider((const) getenv("WINDIR")
+		+ "\\system32\\asepkcs11.dll", NULL);
 #else
 	ret = gnutls_pkcs11_add_provider("libASEP11.so", NULL);
 #endif
@@ -126,136 +141,69 @@ bool Firmador::OnInit() {
 	std::vector<gnutls_pkcs11_obj_t*> token_obj_lists;
 	std::vector<unsigned int> token_obj_lists_sizes;
 	unsigned int obj_list_size = 0;
-	/*
-	 * Importa todos los objetos de tipo certificado de los identificadores
-	 * y guarda la lista de certificados de cada identificador en un
-	 * obj_list, guardando la cantidad de objetos en obj_list_size y
-	 * guardando los de cada identificador en vectores.
-	 */
+
 	for (size_t i = 0; i < token_urls.size(); i++) {
 		ret = gnutls_pkcs11_obj_list_import_url2(&obj_list,
 			&obj_list_size, token_urls.at(i).c_str(), 0,
 			GNUTLS_PKCS11_OBJ_FLAG_CRT);
-
-		if (ret < GNUTLS_E_SUCCESS) {
-			std::cerr << "Error al importar objetos de tipo "
-				<< "certificado del identificador " << i
-				<< gnutls_strerror(ret) << std::endl;
-			exit(ret);
-		}
 		token_obj_lists.push_back(obj_list);
 		token_obj_lists_sizes.push_back(obj_list_size);
 	}
 
 	std::vector<std::string> candidate_certs;
-	/* Recorre las listas de objetos y analiza los certificados. */
+
 	for (size_t i = 0; i < token_obj_lists_sizes.size(); i++) {
+
 		for (size_t j = 0; j < token_obj_lists_sizes.at(i); j++) {
+
 			gnutls_x509_crt_t cert;
-			ret = gnutls_x509_crt_init(&cert);
+			gnutls_x509_crt_init(&cert);
 
-			if (ret < GNUTLS_E_SUCCESS) {
-				std::cerr << "Error al crear estructura del "
-					<< "certificado " << j
-					<< " del identificador " << i << ": "
-					<< gnutls_strerror(ret) << std::endl;
-				exit(ret);
-			}
-
-			ret = gnutls_x509_crt_import_pkcs11(cert,
+			gnutls_x509_crt_import_pkcs11(cert,
 				token_obj_lists.at(i)[j]);
 
-			if (ret < GNUTLS_E_SUCCESS) {
-				std::cerr << "Error al importar el "
-					<< "certificado " << j
-					<< " del identificador " << i << ": "
-					<< gnutls_strerror(ret) << std::endl;
-				exit(ret);
-			}
-
-			char givenname[32];
-			size_t givenname_size = sizeof(givenname);
-			gnutls_x509_crt_get_dn_by_oid(cert,
-				GNUTLS_OID_X520_GIVEN_NAME, 0, 0, givenname,
-				&givenname_size);
-
-			if (ret < GNUTLS_E_SUCCESS) {
-				std::cerr << "Error al obtener el nombre del "
-					<< "certificado " << j
-					<< " del identificador " << i << ": "
-					<< gnutls_strerror(ret) << std::endl;
-				exit(ret);
-			}
-
-			char surname[80];
-			size_t surname_size = sizeof(surname);
-			gnutls_x509_crt_get_dn_by_oid(cert,
-				GNUTLS_OID_X520_SURNAME, 0, 0, surname,
-				&surname_size);
-
-			if (ret < GNUTLS_E_SUCCESS) {
-				std::cerr << "Error al obtener el apellido "
-					<< "del certificado " << j
-					<< " del identificador " << i << ": "
-					<< gnutls_strerror(ret) << std::endl;
-				exit(ret);
-			}
-
-			char serialnumber[128];
-			size_t serialnumber_size = sizeof(serialnumber);
-			gnutls_x509_crt_get_dn_by_oid(cert, "2.5.4.5", 0, 0,
-				serialnumber, &serialnumber_size);
-
-			if (ret < GNUTLS_E_SUCCESS) {
-				std::cerr << "Error al obtener el numero de "
-					<< "documento del certificado " << j
-					<< " del identificador " << i << ": "
-					<< gnutls_strerror(ret) << std::endl;
-				exit(ret);
-			}
-
-			char obj_label[384];
-			size_t obj_label_size = sizeof(obj_label);
-			ret = gnutls_pkcs11_obj_get_info(
-				token_obj_lists.at(i)[j],
-				GNUTLS_PKCS11_OBJ_LABEL, obj_label,
-				&obj_label_size);
-
-			if (ret < GNUTLS_E_SUCCESS) {
-				std::cerr << "Error al obtener la etiqueta "
-					<< "del certificado " << j << ": "
-					<< gnutls_strerror(ret) << std::endl;
-				exit(ret);
-			}
-
-			std::cout << "Identificador " << i << ", certificado "
-				<< j << ": " << givenname << " " << surname
-				<< " (Documento: " << serialnumber
-				<< ", etiqueta: " << obj_label << ")"
-				<< std::endl;
-
 			unsigned int keyusage;
-			ret = gnutls_x509_crt_get_key_usage(cert, &keyusage,
+			gnutls_x509_crt_get_key_usage(cert, &keyusage,
 				NULL);
 
 			if (keyusage & GNUTLS_KEY_NON_REPUDIATION) {
-				std::cout << "La clave del identificador "
-					<< i << ", certificado " << j
-					<< " es adecuada para firmar porque "
-					<< "tiene uso 'no repudio'."
+
+				char nombre[32];
+				size_t nombre_size = sizeof(nombre);
+				gnutls_x509_crt_get_dn_by_oid(cert,
+					GNUTLS_OID_X520_GIVEN_NAME, 0, 0,
+					 nombre, &nombre_size);
+
+				char apellido[80];
+				size_t apellido_size = sizeof(apellido);
+				gnutls_x509_crt_get_dn_by_oid(cert,
+					GNUTLS_OID_X520_SURNAME, 0, 0,
+					apellido, &apellido_size);
+
+				char cedula[128];
+				size_t cedula_size = sizeof(cedula);
+				gnutls_x509_crt_get_dn_by_oid(cert, "2.5.4.5",
+					0, 0, cedula, &cedula_size);
+
+				char obj_label[384];
+				size_t obj_label_size = sizeof(obj_label);
+				gnutls_pkcs11_obj_get_info(
+					token_obj_lists.at(i)[j],
+					GNUTLS_PKCS11_OBJ_LABEL, obj_label,
+					&obj_label_size);
+
+				std::cout << "Identificador " << i
+					<< ", certificado " << j << ": "
+					<< nombre << " " << apellido
+					<< " (Documento: " << cedula
+					<< ", etiqueta: " << obj_label << ")"
 					<< std::endl;
+
 				char *obj_url;
-				ret = gnutls_pkcs11_obj_export_url(
+				gnutls_pkcs11_obj_export_url(
 					token_obj_lists.at(i)[j],
 					GNUTLS_PKCS11_URL_GENERIC, &obj_url);
-				if (ret < GNUTLS_E_SUCCESS) {
-					std::cerr << "Error al obtener la URL "
-						<< "del certificado " << j
-						<< "del identificador " << i
-						<< ": " << gnutls_strerror(ret)
-						<< std::endl;
-					exit(ret);
-				}
+
 				candidate_certs.push_back(obj_url);
 				gnutls_free(obj_url);
 			}
