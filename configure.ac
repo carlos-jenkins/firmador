@@ -20,7 +20,7 @@ PKG_CHECK_MODULES([GNUTLS],[gnutls])
 PKG_CHECK_MODULES([MICROHTTPD],[libmicrohttpd])
 
 AM_OPTIONS_WXCONFIG
-reqwx=3.0.2
+reqwx=2.8.12
 AM_PATH_WXCONFIG($reqwx, wxWin=1)
 AS_IF([test "$wxWin" != 1], [
 	AC_MSG_ERROR([
@@ -36,14 +36,13 @@ AS_IF([test "$wxWin" != 1], [
 
 
 # Checks for header files.
-AC_CHECK_HEADERS([unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
+AC_CHECK_HEADER_STDBOOL
 AC_TYPE_SIZE_T
 
 # Checks for library functions.
 AC_CHECK_FUNCS([getpass])
 
 AC_CONFIG_FILES([Makefile])
-
 AC_OUTPUT
