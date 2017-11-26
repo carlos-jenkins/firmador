@@ -8,6 +8,7 @@
 /configure
 /depcomp
 /firmador
+/firmador.exe
 /firmador-*.tar.gz
 /firmador-*/
 /install-sh
