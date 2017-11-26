@@ -7,7 +7,7 @@ firmador_SOURCES = \
 	src/firmador.h
 
 firmador_CXXFLAGS = \
-	-Wall -Wextra -pedantic \
+	-Wall -Wextra -pedantic -Wno-unused-local-typedefs \
 	-I$(srcdir)/src \
 	$(GNUTLS_CFLAGS) \
 	$(MICROHTTPD_CFLAGS) \
