@@ -4,7 +4,7 @@ pipeline {
     stage('Build') {
       steps {
         sh 'autoreconf -i'
-        sh 'mingw32-configure'
+        sh 'mingw32-configure CXXFLAGS=-Wno-unused-local-typedefs'
         sh 'mingw32-make'
       }
     }
