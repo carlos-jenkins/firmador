@@ -87,6 +87,12 @@ Para compilar:
     make
 
 
+### Binarios precompilados para Windows
+
+Se puede descargar desde mi servidor de integración continua una
+[versión precompilada para Windows](https://fran.cr/jenkins/job/firmador/job/master/lastSuccessfulBuild/artifact/firmador.zip).
+
+
 Estado del desarrollo
 ---------------------
 
@@ -98,12 +104,12 @@ Este proyecto todavía está en las primeras etapas de desarrollo.
 * Acceso a la tarjeta de firma digital.
 * Solicitud de PIN.
 * Selección de certificado.
+* Entorno gráfico
 
 
 ### Partes pendientes de implementar
 
 * Componente RESTful de escritorio
-* Entorno gráfico
 * Instaladores
 
 
