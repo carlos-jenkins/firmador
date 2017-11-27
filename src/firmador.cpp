@@ -28,18 +28,14 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 
 IMPLEMENT_APP(Firmador)
 
-static int pin_callback(void *user, int attempt, const char *token_url,
+static int pin_callback(void *userdata, int attempt, const char *token_url,
 	const char *token_label, unsigned int flags, char *pin,
 	size_t pin_max) {
 
-	const char *password = NULL;
+	(void) userdata;
+	(void) attempt;
+	(void) token_url;
 	int len;
-
-	/* No se usan esta variables, silenciar al compilador */
-	(void)user;
-	(void)attempt;
-	(void)token_url;
-
 	wxString warning = wxT("");
 
 	if (flags & GNUTLS_PIN_FINAL_TRY) {
@@ -57,28 +53,31 @@ static int pin_callback(void *user, int attempt, const char *token_url,
 	}
 
 	wxPasswordEntryDialog pinDialog(NULL, warning
-		+ wxT("Introducir el PIN de la tarjeta")
+		+ wxT("Introducir el PIN de la tarjeta ")
 		+ wxString(token_label, wxConvUTF8) + wxT(":"),
 		wxT("Introducción del PIN"), wxEmptyString,
 		wxTextEntryDialogStyle | wxSTAY_ON_TOP);
-	//int selected_cert;
+
 	if (pinDialog.ShowModal() == wxID_OK) {
-		std::cout << "PIN: " << pinDialog.GetValue()
-			<< std::endl;
+		if (pinDialog.GetValue().mb_str(wxConvUTF8).data() == NULL
+			|| pinDialog.GetValue().mb_str(wxConvUTF8)
+				.data()[0] == 0) {
+			std::cerr << "No se ha introducido ningun valor."
+				<< std::endl;
+			exit(1);
+		}
+
+		len = std::min(pin_max - 1,
+			std::char_traits<char>::length(
+				pinDialog.GetValue().mb_str(wxConvUTF8)));
+		memcpy(pin, pinDialog.GetValue().mb_str(wxConvUTF8), len);
+		pin[len] = 0;
+
+		return 0;
 	} else {
 		exit(1);
 	}
 
-	if (password == NULL || password[0] == 0) {
-		std::cerr << "No se ha introducido ningun valor." << std::endl;
-		exit(1);
-	}
-
-	len = std::min(pin_max - 1, strlen(password));
-	memcpy(pin, password, len);
-	pin[len] = 0;
-
-	return 0;
 }
 
 bool Firmador::OnInit() {
@@ -145,7 +144,8 @@ bool Firmador::OnInit() {
 	for (size_t i = 0; i < token_urls.size(); i++) {
 		ret = gnutls_pkcs11_obj_list_import_url2(&obj_list,
 			&obj_list_size, token_urls.at(i).c_str(), 0,
-			GNUTLS_PKCS11_OBJ_FLAG_CRT);
+			GNUTLS_PKCS11_OBJ_FLAG_CRT
+			/*| GNUTLS_PKCS11_OBJ_FLAG_LOGIN*/);
 		token_obj_lists.push_back(obj_list);
 		token_obj_lists_sizes.push_back(obj_list_size);
 	}
