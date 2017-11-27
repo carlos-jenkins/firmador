@@ -21,6 +21,7 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <vector>
 
 #include <gnutls/pkcs11.h>
@@ -100,8 +101,9 @@ bool Firmador::OnInit() {
 	 * se encarga p11-kit de manejarlo.
 	 */
 #ifdef _WIN32
-	ret = gnutls_pkcs11_add_provider((const) getenv("WINDIR")
-		+ "\\system32\\asepkcs.dll", NULL);
+	std::ostringstream path;
+	path << getenv("WINDIR") << "\\System32\\asepkcs.dll";
+	ret = gnutls_pkcs11_add_provider(path.str().c_str(), NULL);
 #else
 	ret = gnutls_pkcs11_add_provider("libASEP11.so", NULL);
 #endif
