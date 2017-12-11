@@ -11,8 +11,8 @@ pipeline {
     }
     stage('Archive') {
       steps {
-        sh 'ln -snf /usr/i686-w64-mingw32/sys-root/mingw/bin libs'
-        archiveArtifacts 'firmador.exe,firmador.exe.manifest,libs/libgcc_s_sjlj-1.dll,libs/libgnutls-30.dll,libs/libstdc++-6,libs/wxbase28u_gcc_custom,libs/wxmsw28u_core_gcc_custom.dll,libs/libwinpthread-1.dll,libs/libgmp-10.dll,libs/libhogweed-4.dll,libs/libnettle-6.dll,libs/libp11-kit-0.dll,libs/libtasn1-6,libs/zlib1.dll,libs/libjpeg-62.dll,libs/libpng16-16.dll,libs/libtiff-5.dll,libs/libffi-6.dll'
+        sh 'ln -sf /usr/i686-w64-mingw32/sys-root/mingw/bin/{libgcc_s_sjlj-1,libgnutls-30,libstdc++-6,wxbase28u_gcc_custom,wxmsw28u_core_gcc_custom,libwinpthread-1,libgmp-10,libhogweed-4,libnettle-6,libp11-kit-0,libtasn1-6,zlib1,libjpeg-62,libpng16-16,libtiff-5,libffi-6}.dll .'
+        archiveArtifacts 'firmador.exe,firmador.exe.manifest,*.dll'
       }
     }
   }
