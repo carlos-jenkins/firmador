@@ -90,7 +90,7 @@ Para compilar:
 ### Binarios precompilados para Windows
 
 Se puede descargar desde mi servidor de integración continua una
-[versión precompilada para Windows](https://fran.cr/jenkins/job/firmador/job/master/lastSuccessfulBuild/artifact/firmador.zip).
+[versión precompilada para Windows](https://fran.cr/jenkins/job/firmador/job/master/lastSuccessfulBuild/artifact/*zip*/firmador.zip).
 
 
 Estado del desarrollo
