@@ -143,6 +143,7 @@ bool Firmador::OnInit() {
 	}
 
 	wxArrayString cert_choices;
+	wxArrayString cert_captions;
 
 	for (size_t i = 0; i < token_obj_lists_sizes.size(); i++) {
 
@@ -177,19 +178,11 @@ bool Firmador::OnInit() {
 				gnutls_x509_crt_get_dn_by_oid(cert, "2.5.4.5",
 					0, 0, cedula, &cedula_size);
 
-				char obj_label[384];
-				size_t obj_label_size = sizeof(obj_label);
-				gnutls_pkcs11_obj_get_info(
-					token_obj_lists.at(i)[j],
-					GNUTLS_PKCS11_OBJ_LABEL, obj_label,
-					&obj_label_size);
-
-				std::cout << "Identificador " << i
-					<< ", certificado " << j << ": "
-					<< nombre << " " << apellido
-					<< " (Documento: " << cedula
-					<< ", etiqueta: " << obj_label << ")"
-					<< std::endl;
+				std::ostringstream caption;
+				caption << nombre << " " << apellido << " ("
+					<< cedula << ")";
+				cert_captions.Add(wxString(
+					caption.str().c_str(), wxConvUTF8));
 
 				char *obj_url;
 				gnutls_pkcs11_obj_export_url(
@@ -206,7 +199,7 @@ bool Firmador::OnInit() {
 
 	wxSingleChoiceDialog choiceDialog(NULL,
 		wxT("Seleccionar el certificado con el que se desea firmar."),
-		wxT("Selección de certificado"), cert_choices);
+		wxT("Selección de certificado"), cert_captions);
 	//int selected_cert;
 	if (choiceDialog.ShowModal() == wxID_OK) {
 		std::cout << "Seleccion: " << choiceDialog.GetSelection()
@@ -230,7 +223,7 @@ bool Firmador::OnInit() {
 	 */
 /*
 	ret = gnutls_pkcs11_obj_import_url(,
-		candidate_certs.Item(selected_cert),
+		cert_choices.Item(selected_cert),
 		GNUTLS_PKCS11_OBJ_FLAG_PRIVKEY);
 	if (ret < GNUTLS_E_SUCCESS) {
 		std::cerr << "Error al importar la URL de la clave privada "
