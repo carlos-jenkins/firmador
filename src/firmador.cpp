@@ -95,11 +95,6 @@ bool Firmador::OnInit() {
 		exit(ret);
 	}
 
-	/*
-	 * Ruta a la libreria PKCS #11 o al nombre del modulo en p11-kit.
-	 * Si la libreria es privativa no afecta al programa GPL porque
-	 * se encarga p11-kit de manejarlo.
-	 */
 #ifdef _WIN32
 	std::ostringstream path;
 	path << getenv("WINDIR") << "\\System32\\asepkcs.dll";
@@ -114,10 +109,6 @@ bool Firmador::OnInit() {
 		exit(ret);
 	}
 
-	/*
-	 * Obtiene un listado de todos los identificadores conectados
-	 * (aunque normalmente haya uno) y lo guarda en token_urls.
-	 */
 	std::vector<std::string> token_urls;
 	for (size_t i = 0; ; i++) {
 		char* url;
@@ -146,13 +137,12 @@ bool Firmador::OnInit() {
 	for (size_t i = 0; i < token_urls.size(); i++) {
 		ret = gnutls_pkcs11_obj_list_import_url2(&obj_list,
 			&obj_list_size, token_urls.at(i).c_str(), 0,
-			GNUTLS_PKCS11_OBJ_FLAG_CRT
-			| GNUTLS_PKCS11_OBJ_FLAG_LOGIN);
+			GNUTLS_PKCS11_OBJ_FLAG_CRT);
 		token_obj_lists.push_back(obj_list);
 		token_obj_lists_sizes.push_back(obj_list_size);
 	}
 
-	std::vector<std::string> candidate_certs;
+	wxArrayString cert_choices;
 
 	for (size_t i = 0; i < token_obj_lists_sizes.size(); i++) {
 
@@ -206,17 +196,12 @@ bool Firmador::OnInit() {
 					token_obj_lists.at(i)[j],
 					GNUTLS_PKCS11_URL_GENERIC, &obj_url);
 
-				candidate_certs.push_back(obj_url);
+				cert_choices.Add(wxString(obj_url,
+					wxConvUTF8));
 				gnutls_free(obj_url);
 			}
 			gnutls_x509_crt_deinit(cert);
 		}
-	}
-
-	wxArrayString cert_choices;
-	for (size_t i = 0; i < candidate_certs.size(); i++) {
-		cert_choices.Add(wxString(candidate_certs.at(i).c_str(),
-			wxConvUTF8));
 	}
 
 	wxSingleChoiceDialog choiceDialog(NULL,
@@ -245,7 +230,7 @@ bool Firmador::OnInit() {
 	 */
 /*
 	ret = gnutls_pkcs11_obj_import_url(,
-		candidate_certs.at(selected_cert),
+		candidate_certs.Item(selected_cert),
 		GNUTLS_PKCS11_OBJ_FLAG_PRIVKEY);
 	if (ret < GNUTLS_E_SUCCESS) {
 		std::cerr << "Error al importar la URL de la clave privada "
