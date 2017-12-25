@@ -61,16 +61,25 @@ Instalación
 ### Requerimientos
 
 * Compilador de lenguaje C++.
-* Cabeceras de desarrollo de GnuTLS, libmicrohttpd y wxWidgets.
+* Cabeceras de desarrollo de GnuTLS, libmicrohttpd, RapidJSON y wxWidgets.
 * Autoconf, Automake y pkg-config
 
-En Fedora se pueden instalar las dependencias con:
+En Fedora, Red Hat Enterprise Linux (con EPEL) y CentOS (con EPEL) se pueden
+instalar las dependencias con:
 
-    su -c 'dnf -y install git-core gcc-c++ automake gnutls-devel libmicrohttpd-devel wxGTK3-devel' 
+    # dnf -y install git-core gcc-c++ automake gnutls-devel libmicrohttpd-devel wxGTK3-devel rapidjson-devel
 
-En Debian se pueden instalar las dependencias con:
+En Debian y Ubuntu se pueden instalar las dependencias con:
 
-    su -c 'apt -y install git-core g++ automake pkg-config libgnutls28-dev libmicrohttpd-dev libwxgtk3.0-dev'
+    # apt -y install git-core g++ automake pkg-config libgnutls28-dev libmicrohttpd-dev libwxgtk3.0-dev rapidjson-dev
+
+En SUSE Linux Enterprise Server 12 (con el Software Development Kit) se pueden
+instalar las dependencias con:
+
+    # zypper install -y git-core gcc-c++ automake pkg-config libgnutls-devel libmicrohttpd-devel wxWidgets-devel
+
+SUSE Linux Enterprise Server 12 requiere instalar `rapidjson` aparte, ya sea
+copiando la carpeta de cabeceras o mediante paquete externo.
 
 
 ### Compilación
@@ -122,4 +131,3 @@ Este programa es software libre, distribuido bajo la licencia GPL versión 3 o
 en sus versiones posteriores.
 
 El texto de la licencia está disponible en el fichero COPYING.
-
