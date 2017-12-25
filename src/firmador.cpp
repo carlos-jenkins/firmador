@@ -100,7 +100,7 @@ bool Firmador::OnInit() {
 	path << getenv("WINDIR") << "\\System32\\asepkcs.dll";
 	ret = gnutls_pkcs11_add_provider(path.str().c_str(), NULL);
 #else
-	ret = gnutls_pkcs11_add_provider("libASEP11.so", NULL);
+	ret = gnutls_pkcs11_add_provider("/usr/lib/x64-athena/libASEP11.so", NULL);
 #endif
 
 	if (ret < GNUTLS_E_SUCCESS) {
@@ -136,8 +136,8 @@ bool Firmador::OnInit() {
 
 	for (size_t i = 0; i < token_urls.size(); i++) {
 		ret = gnutls_pkcs11_obj_list_import_url2(&obj_list,
-			&obj_list_size, token_urls.at(i).c_str(), 0,
-			GNUTLS_PKCS11_OBJ_FLAG_CRT);
+			&obj_list_size, token_urls.at(i).c_str(),
+			GNUTLS_PKCS11_OBJ_ATTR_CRT_ALL, 0);
 		token_obj_lists.push_back(obj_list);
 		token_obj_lists_sizes.push_back(obj_list_size);
 	}
