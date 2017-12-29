@@ -222,7 +222,8 @@ bool Firmador::OnInit() {
 	 * vez con PIN para poder usar la clave privada para poder firmar.
 	 */
 	gnutls_privkey_import_url(key,
-		cert_choices.Item(choiceDialog.GetSelection()), 0);
+		cert_choices.Item(
+			choiceDialog.GetSelection()).mb_str(wxConvUTF8), 0);
 	if (ret < GNUTLS_E_SUCCESS) {
 		std::cerr << "Error al importar la URL de la clave privada: "
 			<< gnutls_strerror(ret) << std::endl;
