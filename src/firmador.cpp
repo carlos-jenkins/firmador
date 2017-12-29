@@ -200,7 +200,7 @@ bool Firmador::OnInit() {
 	wxSingleChoiceDialog choiceDialog(NULL,
 		wxT("Seleccionar el certificado con el que se desea firmar."),
 		wxT("Selección de certificado"), cert_captions);
-	//int selected_cert;
+
 	if (choiceDialog.ShowModal() == wxID_OK) {
 		std::cout << "Seleccion: " << choiceDialog.GetSelection()
 			<< std::endl;
@@ -221,30 +221,32 @@ bool Firmador::OnInit() {
 	 * Tras seleccionarse, cargar el identificador correspondiente, esta
 	 * vez con PIN para poder usar la clave privada para poder firmar.
 	 */
-/*
-	ret = gnutls_pkcs11_obj_import_url(,
-		cert_choices.Item(selected_cert),
-		GNUTLS_PKCS11_OBJ_FLAG_PRIVKEY);
+	gnutls_privkey_import_url(key,
+		cert_choices.Item(choiceDialog.GetSelection()), 0);
 	if (ret < GNUTLS_E_SUCCESS) {
-		std::cerr << "Error al importar la URL de la clave privada "
-			<< "para el certificado " << selected_cert << ": "
+		std::cerr << "Error al importar la URL de la clave privada: "
 			<< gnutls_strerror(ret) << std::endl;
 		exit(ret);
 	}
-*/
-	/*
-	// TODO: firmar datos eventualmente
+
 	gnutls_datum_t data = {(unsigned char*)"hola", 4};
 	gnutls_datum_t sig;
 	ret = gnutls_privkey_sign_data(key, GNUTLS_DIG_SHA256, 0, &data, &sig);
 
 	if (ret < GNUTLS_E_SUCCESS) {
-		std::cerr << "Error al firmar datos con la clave privada del "
-			<< "certificado " << i << gnutls_strerror(ret)
+		std::cerr << "Error al firmar: " << gnutls_strerror(ret)
 			<< std::endl;
 		exit(ret);
 	}
-	*/
+
+	gnutls_datum_t sig_hex;
+	gnutls_hex_encode2(&sig, &sig_hex);
+	std::cout << "Firma: " << sig_hex.data << std::endl;
+
+	gnutls_free(sig_hex.data);
+	gnutls_free(sig.data);
+	gnutls_privkey_deinit(key);
+
 	for (size_t i = 0; i < token_obj_lists_sizes.size(); i++) {
 		for (size_t j = 0; j < token_obj_lists_sizes.at(i); j++) {
 			gnutls_pkcs11_obj_deinit(token_obj_lists.at(i)[j]);
