@@ -110,15 +110,18 @@ Este proyecto todavía está en las primeras etapas de desarrollo.
 
 ### Partes implementadas
 
-* Acceso a la tarjeta de firma digital.
-* Solicitud de PIN.
-* Selección de certificado.
+* Acceso a la tarjeta de firma digital
 * Entorno gráfico
+* Selección de certificado
+* Solicitud de PIN
+* Proceso de firma
 
 
 ### Partes pendientes de implementar
 
-* Componente RESTful de escritorio
+* Manejo de JSON en el servicio web
+* Recepción del resumen
+* Envío del resumen firmado
 * Instaladores
 
 
