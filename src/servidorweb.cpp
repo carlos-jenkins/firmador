@@ -38,24 +38,34 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection,
 	const char *url, const char *method, const char *version,
 	const char *upload_data, size_t *upload_data_size, void **con_cls) {
 
-	const char *page = "{\"Hola\": \"Mundo!\"}";
 	struct MHD_Response *response;
 	int ret;
+	int ret_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
 
 	(void)cls;
-	(void)method;
 	(void)version;
 	(void)url;
 	(void)upload_data;
 	(void)upload_data_size;
 	(void)con_cls;
 
-	if (strcmp(method, "POST") != 0) return MHD_NO;
+	if (strcmp(method, MHD_HTTP_METHOD_POST) == 0) {
+		ret_code = MHD_HTTP_OK;
+		const char *page = "{\"Hola\": \"Mundo!\"}";
+		response = MHD_create_response_from_buffer(strlen(page), (void *)page,
+			 MHD_RESPMEM_PERSISTENT);
+	} else {
+		ret_code = MHD_HTTP_METHOD_NOT_ALLOWED;
+		const char *page = "";
+		response = MHD_create_response_from_buffer(strlen(page), (void *)page,
+			 MHD_RESPMEM_PERSISTENT);
+		MHD_add_response_header(response, MHD_HTTP_HEADER_ALLOW,
+			MHD_HTTP_METHOD_POST);
+	}
 
-	response = MHD_create_response_from_buffer(strlen(page), (void *)page,
-		 MHD_RESPMEM_PERSISTENT);
-	MHD_add_response_header(response, "Content-Type", "application/json");
-	ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
+	MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_TYPE,
+		"application/json");
+	ret = MHD_queue_response(connection, ret_code, response);
 	MHD_destroy_response(response);
 
 	return ret;
