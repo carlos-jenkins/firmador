@@ -53,7 +53,8 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection,
 		const char *headervalue;
 		headervalue = MHD_lookup_connection_value(connection,
 			MHD_HEADER_KIND, MHD_HTTP_HEADER_CONTENT_TYPE);
-		if (strcmp(headervalue, "application/json") == 0) {
+		if (headervalue != NULL &&
+			strcmp(headervalue, "application/json") == 0) {
 			ret_code = MHD_HTTP_OK;
 			const char *page = "{\"Hola\": \"Mundo!\"}";
 			response = MHD_create_response_from_buffer(strlen(page),
