@@ -54,6 +54,8 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection,
 		const char *page = "{\"Hola\": \"Mundo!\"}";
 		response = MHD_create_response_from_buffer(strlen(page), (void *)page,
 			 MHD_RESPMEM_PERSISTENT);
+		MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_TYPE,
+			"application/json");
 	} else {
 		ret_code = MHD_HTTP_METHOD_NOT_ALLOWED;
 		const char *page = "";
@@ -63,8 +65,6 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection,
 			MHD_HTTP_METHOD_POST);
 	}
 
-	MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_TYPE,
-		"application/json");
 	ret = MHD_queue_response(connection, ret_code, response);
 	MHD_destroy_response(response);
 
