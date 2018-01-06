@@ -157,11 +157,11 @@ bool Firmador::OnInit() {
 		exit(ret);
 	}
 
-#ifdef __WXOSX_MAC__
+#ifdef __WIN32__
 	std::ostringstream path;
 	path << getenv("WINDIR") << "\\System32\\asepkcs.dll";
 	ret = gnutls_pkcs11_add_provider(path.str().c_str(), NULL);
-#elif __WIN32__
+#elif __WXOSX_MAC__
 	ret = gnutls_pkcs11_add_provider(
 		"/Library/Application Support/Athena/libASEP11.dylib", NULL);
 #elif __LINUX__
