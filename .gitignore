@@ -15,6 +15,7 @@
 /Makefile
 /Makefile.in
 /missing
+/rapidjson
 /src/.deps/
 /src/.dirstamp
 /src/*.o
