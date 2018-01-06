@@ -1,4 +1,4 @@
-EXTRA_DIST = README.md firmador.exe.manifest src/servidorweb.cpp
+EXTRA_DIST = README.md firmador.exe.manifest
 
 bin_PROGRAMS = firmador
 
