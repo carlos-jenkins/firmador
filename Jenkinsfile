@@ -3,6 +3,7 @@ pipeline {
   stages {
     stage('Build') {
       steps {
+        sh 'ln -sf /usr/include/rapidjson'
         sh 'autoreconf -i'
         sh 'mingw32-configure'
         sh 'mingw32-make clean'
