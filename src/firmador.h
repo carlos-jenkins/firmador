@@ -1,6 +1,6 @@
 /* Firmador is a program that communicates web browsers with smartcards.
 
-Copyright (C) 2017 Francisco de la Peña Fernández.
+Copyright (C) 2018 Francisco de la Peña Fernández.
 
 This file is part of Firmador.
 
@@ -19,6 +19,15 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #ifndef FIRMADOR_H
 #define FIRMADOR_H
+
+#include <sys/types.h>
+#ifndef _WIN32
+# include <sys/select.h>
+# include <sys/socket.h>
+#else
+# define UNICODE
+# include <winsock2.h>
+#endif
 
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP

@@ -128,7 +128,7 @@ Este proyecto todavía está en las primeras etapas de desarrollo.
 Licencia
 --------
 
-Copyright © 2017 Francisco de la Peña Fernández.
+Copyright © 2018 Francisco de la Peña Fernández.
 
 Este programa es software libre, distribuido bajo la licencia GPL versión 3 o
 en sus versiones posteriores.

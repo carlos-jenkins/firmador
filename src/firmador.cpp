@@ -1,6 +1,6 @@
 /* Firmador is a program that communicates web browsers with smartcards.
 
-Copyright (C) 2017 Francisco de la Peña Fernández.
+Copyright (C) 2018 Francisco de la Peña Fernández.
 
 This file is part of Firmador.
 
@@ -27,7 +27,59 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 #include <gnutls/pkcs11.h>
 #include <gnutls/abstract.h>
 
+#include <microhttpd.h>
+
 IMPLEMENT_APP(Firmador)
+
+//TODO: usar TLS con el certificado generado por el instalador
+static int request_callback(void *cls, struct MHD_Connection *connection,
+	const char *url, const char *method, const char *version,
+	const char *upload_data, size_t *upload_data_size, void **con_cls) {
+
+	struct MHD_Response *response;
+	int ret;
+	int ret_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
+
+	(void)cls;
+	(void)version;
+	(void)url;
+	(void)upload_data;
+	(void)upload_data_size;
+	(void)con_cls;
+
+	if (strcmp(method, MHD_HTTP_METHOD_POST) == 0) {
+		const char *headervalue;
+		headervalue = MHD_lookup_connection_value(connection,
+			MHD_HEADER_KIND, MHD_HTTP_HEADER_CONTENT_TYPE);
+		if (headervalue != NULL &&
+			strcmp(headervalue, "application/json") == 0) {
+			ret_code = MHD_HTTP_OK;
+			const char *page = "{\"Hola\": \"Mundo!\"}";
+			response = MHD_create_response_from_buffer(strlen(page),
+				(void *)page, MHD_RESPMEM_PERSISTENT);
+			MHD_add_response_header(response,
+				MHD_HTTP_HEADER_CONTENT_TYPE,
+				"application/json");
+		} else {
+			ret_code = MHD_HTTP_BAD_REQUEST;
+			const char *page = "";
+			response = MHD_create_response_from_buffer(strlen(page),
+				(void *)page, MHD_RESPMEM_PERSISTENT);
+		}
+
+	} else {
+		ret_code = MHD_HTTP_METHOD_NOT_ALLOWED;
+		const char *page = "";
+		response = MHD_create_response_from_buffer(strlen(page), (void *)page,
+			MHD_RESPMEM_PERSISTENT);
+		MHD_add_response_header(response, MHD_HTTP_HEADER_ALLOW,
+			MHD_HTTP_METHOD_POST);
+	}
+
+	ret = MHD_queue_response(connection, ret_code, response);
+	MHD_destroy_response(response);
+	return ret;
+}
 
 static int pin_callback(void *userdata, int attempt, const char *token_url,
 	const char *token_label, unsigned int flags, char *pin,
@@ -78,10 +130,20 @@ static int pin_callback(void *userdata, int attempt, const char *token_url,
 	} else {
 		exit(1);
 	}
-
 }
 
 bool Firmador::OnInit() {
+	struct MHD_Daemon *daemon;
+
+	daemon = MHD_start_daemon(MHD_USE_SELECT_INTERNALLY, 50600, NULL, NULL,
+		&request_callback, NULL, MHD_OPTION_END);
+	if (daemon == NULL) {
+		return 1;
+	}
+
+	//(void)getchar();
+
+	MHD_stop_daemon(daemon);
 
 	gnutls_pkcs11_set_pin_function(pin_callback, NULL);
 
@@ -95,12 +157,24 @@ bool Firmador::OnInit() {
 		exit(ret);
 	}
 
-#ifdef _WIN32
+#ifdef __WXOSX_MAC__
 	std::ostringstream path;
 	path << getenv("WINDIR") << "\\System32\\asepkcs.dll";
 	ret = gnutls_pkcs11_add_provider(path.str().c_str(), NULL);
+#elif __WIN32__
+	ret = gnutls_pkcs11_add_provider(
+		"/Library/Application Support/Athena/libASEP11.dylib", NULL);
+#elif __LINUX__
+	ret = gnutls_pkcs11_add_provider("/usr/lib/x64-athena/libASEP11.so",
+		NULL);
 #else
-	ret = gnutls_pkcs11_add_provider("/usr/lib/x64-athena/libASEP11.so", NULL);
+	wxMessageBox(wxString("Sistema no soportado por el ", wxConvUTF8)
+		+ wxString("firmador.\n", wxConvUTF8)
+		+ wxString("El fabricante de la tarjeta ", wxConvUTF8)
+		+ wxString("solamente soporta Linux, macOS y ", wxConvUTF8)
+		+ wxString("Windows con procesadores x86.", wxConvUTF8),
+		wxT("Sistema no soportado"), wxICON_ERROR);
+	exit(1);
 #endif
 
 	if (ret < GNUTLS_E_SUCCESS) {
@@ -165,7 +239,7 @@ bool Firmador::OnInit() {
 				size_t nombre_size = sizeof(nombre);
 				gnutls_x509_crt_get_dn_by_oid(cert,
 					GNUTLS_OID_X520_GIVEN_NAME, 0, 0,
-					 nombre, &nombre_size);
+					nombre, &nombre_size);
 
 				char apellido[80];
 				size_t apellido_size = sizeof(apellido);
@@ -260,5 +334,5 @@ bool Firmador::OnInit() {
 
 	gnutls_pkcs11_deinit();
 
-	return false; // FIXME: cambiar a true cuando haya GUI
+	return false;
 }
