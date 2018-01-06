@@ -34,10 +34,12 @@ ha solicitado y si el resumen coincide con el que se le mostró en el sitio
 web.
 
 La API REST de comunicación con el servidor sería compatible con la utilizada
-por el proyecto [DSS](https://joinup.ec.europa.eu/asset/sd-dss/description),
-para poder llegar a ser un reemplazo compatible con la herramienta NexU pero
-sin requerir Java en el escritorio, permitiendo que la herramienta sea más
-ligera de dependencias, menor tamaño y menor consumo de memoria RAM.
+por el proyecto
+[DSS](https://ec.europa.eu/cefdigital/wiki/pages/viewpage.action?pageId=46992515),
+para poder llegar a ser un reemplazo compatible con la herramienta
+[NexU](http://nowina.lu/nexu/) pero sin requerir Java en el escritorio,
+permitiendo que la herramienta sea más ligera de dependencias, menor tamaño y
+menor consumo de memoria RAM.
 
 El servicio de escritorio será compatible con GNU/Linux, macOS y Windows.
 
