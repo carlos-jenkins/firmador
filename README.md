@@ -51,6 +51,8 @@ Tecnologías usadas
 * [libmicrohttpd](https://www.gnu.org/software/libmicrohttpd/) para el
   componente RESTful de escritorio.
 
+* [RapidJSON](http://rapidjson.org/) para la el manejo de estructuras JSON.
+
 * [wxWidgets](https://wxwidgets.org/) como interfaz gráfica multiplataforma
   nativa.
 
