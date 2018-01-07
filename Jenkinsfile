@@ -5,7 +5,7 @@ pipeline {
       steps {
         sh 'ln -sf /usr/include/rapidjson'
         sh 'autoreconf -i'
-        sh 'mingw32-configure'
+        sh 'mingw32-configure CXXFLAGS="-O2 -s"'
         sh 'mingw32-make clean'
         sh 'mingw32-make'
       }
