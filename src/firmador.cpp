@@ -29,6 +29,8 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include <microhttpd.h>
 
+#define FIRMADOR_PORT 50600
+
 IMPLEMENT_APP(Firmador)
 
 //TODO: usar TLS con el certificado generado por el instalador
@@ -52,7 +54,9 @@ static int request_callback(void *cls, struct MHD_Connection *connection,
 		headervalue = MHD_lookup_connection_value(connection,
 			MHD_HEADER_KIND, MHD_HTTP_HEADER_CONTENT_TYPE);
 		if (headervalue != NULL &&
-			strcmp(headervalue, "application/json") == 0) {
+			(strcmp(headervalue, "application/json") == 0 ||
+			strcmp(headervalue,
+				"application/json;charset=utf-8") == 0)) {
 			ret_code = MHD_HTTP_OK;
 			const char *page = "{\"Hola\": \"Mundo!\"}";
 			response = MHD_create_response_from_buffer(strlen(page),
@@ -134,9 +138,16 @@ static int pin_callback(void *userdata, int attempt, const char *token_url,
 
 bool Firmador::OnInit() {
 	struct MHD_Daemon *daemon;
+	struct sockaddr_in daemon_ip_addr;
 
-	daemon = MHD_start_daemon(MHD_USE_SELECT_INTERNALLY, 50600, NULL, NULL,
-		&request_callback, NULL, MHD_OPTION_END);
+	memset(&daemon_ip_addr, 0, sizeof(struct sockaddr_in));
+	daemon_ip_addr.sin_family = AF_INET;
+	daemon_ip_addr.sin_port = htons(FIRMADOR_PORT);
+	daemon_ip_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+	daemon = MHD_start_daemon(MHD_USE_SELECT_INTERNALLY,
+		FIRMADOR_PORT, NULL, NULL, &request_callback, NULL,
+		MHD_OPTION_SOCK_ADDR, &daemon_ip_addr, MHD_OPTION_END);
 	if (daemon == NULL) {
 		return 1;
 	}

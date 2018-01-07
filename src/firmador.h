@@ -24,6 +24,7 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 #ifndef _WIN32
 # include <sys/select.h>
 # include <sys/socket.h>
+# include <arpa/inet.h>
 #else
 # define UNICODE
 # include <winsock2.h>
@@ -34,8 +35,7 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 # include <wx/wx.h>
 #endif
 
-class Firmador : public wxApp
-{
+class Firmador: public wxApp {
 public:
 	virtual bool OnInit();
 };
