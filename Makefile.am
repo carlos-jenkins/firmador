@@ -16,4 +16,5 @@ firmador_CXXFLAGS = \
 firmador_LDADD = \
 	$(GNUTLS_LIBS) \
 	$(MICROHTTPD_LIBS) \
-	$(WX_LIBS)
+	$(WX_LIBS) \
+	$(MINGW_LIBS)

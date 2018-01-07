@@ -24,6 +24,7 @@ m4_ifdef([AM_OPTIONS_WXCONFIG], [AM_OPTIONS_WXCONFIG],
 	[AC_MSG_ERROR([wxWidgets not found.])])
 AM_PATH_WXCONFIG([2.8.12], [wxWin=1])
 AS_IF([test "$wxWin" != 1], [AC_MSG_ERROR([wx-config not found.])])
+AS_CASE([$host], [*-mingw*], [AC_SUBST([MINGW_LIBS], ["-lws2_32"])])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
