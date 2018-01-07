@@ -41,47 +41,35 @@ static int request_callback(void *cls, struct MHD_Connection *connection,
 	struct MHD_Response *response;
 	int ret;
 	int ret_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
+	std::string page = "";
 
 	(void)cls;
+	(void)method;
 	(void)version;
-	(void)url;
 	(void)upload_data;
 	(void)upload_data_size;
 	(void)con_cls;
 
-	if (strcmp(method, MHD_HTTP_METHOD_POST) == 0) {
-		const char *headervalue;
-		headervalue = MHD_lookup_connection_value(connection,
-			MHD_HEADER_KIND, MHD_HTTP_HEADER_CONTENT_TYPE);
-		if (headervalue != NULL &&
-			(strcmp(headervalue, "application/json") == 0 ||
-			strcmp(headervalue,
-				"application/json;charset=utf-8") == 0)) {
-			ret_code = MHD_HTTP_OK;
-			const char *page = "{\"Hola\": \"Mundo!\"}";
-			response = MHD_create_response_from_buffer(strlen(page),
-				(void *)page, MHD_RESPMEM_PERSISTENT);
-			MHD_add_response_header(response,
-				MHD_HTTP_HEADER_CONTENT_TYPE,
-				"application/json");
-		} else {
-			ret_code = MHD_HTTP_BAD_REQUEST;
-			const char *page = "";
-			response = MHD_create_response_from_buffer(strlen(page),
-				(void *)page, MHD_RESPMEM_PERSISTENT);
-		}
 
-	} else {
-		ret_code = MHD_HTTP_METHOD_NOT_ALLOWED;
-		const char *page = "";
-		response = MHD_create_response_from_buffer(strlen(page), (void *)page,
-			MHD_RESPMEM_PERSISTENT);
-		MHD_add_response_header(response, MHD_HTTP_HEADER_ALLOW,
-			MHD_HTTP_METHOD_POST);
+	if (strcmp(url, "/") || strcmp(url, "/nexu-info")) {
+		ret_code = MHD_HTTP_OK;
+		page = "{ \"version\": \"1.10.5\"}";
 	}
 
+	response = MHD_create_response_from_buffer(page.length(),
+		(void*)page.c_str(), MHD_RESPMEM_MUST_COPY);
+	MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_TYPE,
+		"application/json;charset=utf-8");
+	MHD_add_response_header(response, "Access-Control-Allow-Headers",
+		MHD_HTTP_HEADER_CONTENT_TYPE);
+	MHD_add_response_header(response, "Access-Control-Allow-Methods",
+		"OPTIONS, GET, POST");
+	MHD_add_response_header(response, "Access-Control-Allow-Origin", "*");
+	MHD_add_response_header(response, MHD_HTTP_HEADER_CONNECTION,
+		MHD_HTTP_HEADER_CLOSE);
 	ret = MHD_queue_response(connection, ret_code, response);
 	MHD_destroy_response(response);
+
 	return ret;
 }
 
