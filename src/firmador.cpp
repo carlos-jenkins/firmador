@@ -304,19 +304,24 @@ bool Firmador::OnInit() {
 	}
 
 	gnutls_datum_t data = {(unsigned char*)"hola", 4};
+	gnutls_datum_t hash_hex = {(unsigned char*)
+		"B221D9DBB083A7F33428D7C2A3C3198A"
+		"E925614D70210E28716CCAA7CD4DDB79", 64}; // SHA256 de "hola"
+	gnutls_datum_t hash;
+	gnutls_hex_decode2(&hash_hex, &hash);
+
 	gnutls_datum_t sig;
-	ret = gnutls_privkey_sign_data(key, GNUTLS_DIG_SHA256, 0, &data, &sig);
-
-	if (ret < GNUTLS_E_SUCCESS) {
-		std::cerr << "Error al firmar: " << gnutls_strerror(ret)
-			<< std::endl;
-		exit(ret);
-	}
-
 	gnutls_datum_t sig_hex;
-	gnutls_hex_encode2(&sig, &sig_hex);
-	std::cout << "Firma: " << sig_hex.data << std::endl;
 
+	gnutls_privkey_sign_data(key, GNUTLS_DIG_SHA256, 0, &data, &sig);
+	gnutls_hex_encode2(&sig, &sig_hex);
+	std::cout << "Prueba firma 1: " << sig_hex.data << std::endl;
+
+	gnutls_privkey_sign_hash(key, GNUTLS_DIG_SHA256, 0, &hash, &sig);
+	gnutls_hex_encode2(&sig, &sig_hex);
+	std::cout << "Prueba firma 2: " << sig_hex.data << std::endl;
+
+	gnutls_free(hash.data);
 	gnutls_free(sig_hex.data);
 	gnutls_free(sig.data);
 	gnutls_privkey_deinit(key);
