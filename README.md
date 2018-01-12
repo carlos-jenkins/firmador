@@ -124,6 +124,7 @@ Este proyecto todavía está en las primeras etapas de desarrollo.
 ### Partes pendientes de implementar
 
 * Manejo de JSON en el servicio web
+* Obtención y envío de la cadena de certificados
 * Recepción del resumen
 * Envío del resumen firmado
 * Instaladores
