@@ -2,9 +2,9 @@ Firmador
 ========
 
 Firmador es una herramienta que permite comunicar navegadores web con
-tarjetas de firma digital. Los sitios web pueden solicitar al firmador
-un certificado de la tarjeta y solicitar firmar un resumen criptográfico
-con la clave privada de la tarjeta asociado al certificado.
+dispositivos de Firma Digital. Los sitios web pueden solicitar al firmador
+un certificado del dispositivo y solicitar firmar un resumen criptográfico
+con la clave privada del dispositivo asociado al certificado.
 
 El proyecto está diseñado para uso con el sistema de Firma Digital de
 Costa Rica, aunque podría resultar útil para otros países.
@@ -13,47 +13,47 @@ Costa Rica, aunque podría resultar útil para otros países.
 Funcionamiento
 --------------
 
-El desarrollo se inspira en un servicio de escritorio que recibe de un sitio
-web una petición a una dirección local y puerto conocidos una serie de
-peticiones a rutas específicas, tratándose de un servicio RESTful en JSON.
-La comunicación entre el sitio web y el cliente se realiza por HTTPS, por lo
-que el servicio local debe tener utilizar un certificado. El instalador del
-servicio de escritorio deberá generar una CA en la propia máquina, agregar
-confianza y generar un certificado de servidor para este servicio.
+El mecanismo funciona mediante un servicio de escritorio con un servicio web
+que escucha en la dirección local en un puerto específico. Un sitio web trata
+de conectar a esta dirección local y se comunica mediante peticiones a rutas
+específicas, tratándose de un servicio RESTful, enviando y recibiendo
+estructuras en formato JSON.
 
-El servicio de escritorio solamente se encargará de firmar los resúmenes
-criptográficos, el sitio web será el encargado del resto de la operación,
-por ejemplo, agregar la firma a un documento.
+El servicio de escritorio solamente se encarga de firmar los resúmenes
+criptográficos. El sitio web remoto, que no forma parte de este proyecto, es el
+encargado del resto de la operación, por ejemplo, extraer el resumen de un
+documento, hacer las llamadas al servicio de escritorio, recibir el resumen y
+ensamblar la firma en el documento. Se podría realizar una demostración propia
+eventualmente, aunque por ahora las
+[demostraciones de DSS](https://github.com/esig/dss-demonstrations)
+y su documentación son útiles para probar la funcionalidad del lado del
+servidor. Puesto que el ensamblado de la firma no lo realiza el firmador, es
+agnóstico en cuanto al tipo de documento y nivel firma a generar, encargándose
+de esta tarea el servicio web remoto, sin importar si se trata de XAdES, CAdES,
+PAdES, ASIC-E (para OpenDocument y Office Open XML), etc.
 
-Por seguridad, el sitio web antes de solicitar firmar debería mostrar al
-usuario que se va a proceder a firmar un resumen criptográfico e indicar el
-resumen. Una vez se abra la ventana del firmador de escritorio, aparecerá el
-nombre del sitio web, se verificará que el sitio que pide firmar sea seguro
-y mostrará el resumen al usuario, para que solamente acepte firmar si se le
-ha solicitado y si el resumen coincide con el que se le mostró en el sitio
-web.
-
-La API REST de comunicación con el servidor sería compatible con la utilizada
+La API REST de comunicación con el servidor es compatible con la utilizada
 por el proyecto
-[DSS](https://ec.europa.eu/cefdigital/wiki/pages/viewpage.action?pageId=46992515),
-para poder llegar a ser un reemplazo compatible con la herramienta
+[DSS](https://ec.europa.eu/cefdigital/wiki/pages/viewpage.action?pageId=46992515)
+en su demostración web de firma de documentos, específicamente trata de
+reemplazar la herramienta
 [NexU](http://nowina.lu/nexu/) pero sin requerir Java en el escritorio,
 permitiendo que la herramienta sea más ligera de dependencias, menor tamaño y
 menor consumo de memoria RAM.
 
-El servicio de escritorio será compatible con GNU/Linux, macOS y Windows.
+Firmador es compatible con GNU/Linux, macOS y Windows.
 
 
 Tecnologías usadas
 ------------------
 
 * [GnuTLS](https://gnutls.org/) compilado con p11-kit, que incluye todos los
-  servicios criptográficos necesarios para comunicarse con la tarjeta.
+  servicios criptográficos necesarios para comunicarse con el dispositivo.
 
-* [libmicrohttpd](https://www.gnu.org/software/libmicrohttpd/) para el
-  componente RESTful de escritorio.
+* [libmicrohttpd](https://www.gnu.org/software/libmicrohttpd/) para el servicio
+  web de escritorio.
 
-* [RapidJSON](http://rapidjson.org/) para la el manejo de estructuras JSON.
+* [RapidJSON](http://rapidjson.org/) para el manejo de estructuras JSON.
 
 * [wxWidgets](https://wxwidgets.org/) como interfaz gráfica multiplataforma
   nativa.
@@ -72,6 +72,8 @@ En Fedora, Red Hat Enterprise Linux (con EPEL) y CentOS (con EPEL) se pueden
 instalar las dependencias con:
 
     # dnf -y install git-core gcc-c++ automake gnutls-devel libmicrohttpd-devel wxGTK3-devel rapidjson-devel
+
+En el caso de Red Hat Enterprise Linux y CentOS reemplazar `dnf` con `yum`.
 
 En Debian y Ubuntu se pueden instalar las dependencias con:
 
@@ -109,25 +111,67 @@ Se puede descargar desde mi servidor de integración continua una
 Estado del desarrollo
 ---------------------
 
-Este proyecto todavía está en las primeras etapas de desarrollo.
+El firmador actualmente permite reemplazar la funcionalidad NexU para firmar un
+documento y se ha comprobado que funciona con Firma Digital con certificados
+SHA-2 de persona física en conexiones HTTP.
+
+Queda pendiente soportar HTTPS y que el instalador o en su defecto el propio
+programa sea capaz de generar una CA raíz para localhost y agregarla en los
+llaveros con confianza a nivel usuario o de sistema para su uso en sitios web
+con este protocolo seguro.
 
 
-### Partes implementadas
+### Características implementadas
 
-* Acceso a la tarjeta de firma digital
+* Acceso al dispositivo de Firma Digital
 * Entorno gráfico
 * Selección de certificado
 * Solicitud de PIN
 * Proceso de firma
-
-
-### Partes pendientes de implementar
-
 * Manejo de JSON en el servicio web
 * Obtención y envío de la cadena de certificados
 * Recepción del resumen
 * Envío del resumen firmado
-* Instaladores
+
+
+### Mejoras planeadas
+
+* HTTPS en el servicio web
+* Instaladores (con generación de CA para todos los usuarios)
+* Permitir firma de múltiples documentos a la vez
+* Verificación del sitio que firma y visualización del resumen a firmar
+* Demostración sencilla de firma del lado del servidor
+* Componente JavaScript para visualizar resumen desde un sitio web remoto
+* Posibilidad de firmar con certificado de persona jurídica y otras jerarquías
+* Capacidad para generar CA sin instalador (para el usuario local)
+* Levantar servicio por activación socket de systemd en GNU/Linux
+* Repositorios yum y apt para distribuciones GNU/Linux
+* App Bundle firmado para macOS
+* Instalador y/o ejecutable firmados para Windows
+* Construcción automatizada continua de binarios para GNU/Linux y macOS
+
+
+Motivación
+----------
+
+Este proyecto pretende ofrecer un firmador de escritorio ligero como
+alternativa a firmadores basados en Java, como los del BCCR y SICOP, que
+consumen una cantidad significativa de recursos en las máquinas de los
+escritorios de los usuarios, cuando lo único que se requiere realmente es
+acceso al dispositivo para firmar, ya que el resto de las operaciones se pueden
+realizar perfectamente del lado del servidor. El uso de C++ permite crear
+un firmador multiplataforma nativo, sin requerir de máquina virtual java
+específica o una dependencia de librerias de gran tamaño. El espacio requerido
+es aproximadamente una décima parte, siendo el consumo de RAM también varias
+veces menor, así como el tiempo de carga de la aplicación.
+
+Si existiera la posibilidad de disponer de un firmador genérico que todas las
+instituciones pudieran adoptar permitiría no tener que instalar múltiples
+firmadores de gran tamaño para cada institución, facilitando la instalación y
+mantenimiento de los equipos de escritorio, así como de sus requerimientos. La
+licencia de este proyecto y su código abierto permiten su adopción por parte
+de las instituciones, así como su posible colaboración para proponer mejoras
+o mejorar el código para el interés común.
 
 
 Licencia
