@@ -8,7 +8,9 @@ firmador_SOURCES = \
 	src/firmador.cpp \
 	src/firmador.h \
 	src/pin.cpp \
-	src/pin.h
+	src/pin.h \
+	src/request.cpp \
+	src/request.h
 
 firmador_CXXFLAGS = \
 	-Wall -Wextra -pedantic -Wno-unused-local-typedefs \
