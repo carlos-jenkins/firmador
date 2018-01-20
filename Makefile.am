@@ -6,7 +6,9 @@ firmador_SOURCES = \
 	src/base64.cpp \
 	src/base64.h \
 	src/firmador.cpp \
-	src/firmador.h
+	src/firmador.h \
+	src/pin.cpp \
+	src/pin.h
 
 firmador_CXXFLAGS = \
 	-Wall -Wextra -pedantic -Wno-unused-local-typedefs \
