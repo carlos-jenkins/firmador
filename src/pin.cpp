@@ -19,6 +19,8 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "pin.h"
 
+#include <iostream>
+
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
 # include <wx/wx.h>
