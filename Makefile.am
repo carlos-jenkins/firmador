@@ -3,6 +3,8 @@ EXTRA_DIST = README.md firmador.exe.manifest
 bin_PROGRAMS = firmador
 
 firmador_SOURCES = \
+	src/base64.cpp \
+	src/base64.h \
 	src/firmador.cpp \
 	src/firmador.h
 

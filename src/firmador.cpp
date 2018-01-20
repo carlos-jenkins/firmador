@@ -18,6 +18,7 @@ You should have received a copy of the GNU General Public License
 along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "firmador.h"
+#include "base64.h"
 
 #include <iostream>
 #include <string>
@@ -35,29 +36,6 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 #define FIRMADOR_PORT 50600
 
 IMPLEMENT_APP(Firmador)
-
-static std::string base64_decode(const std::string &in) {
-	std::string out;
-	std::vector<int> vec(256, -1);
-
-	for (int i = 0; i < 64; i++) {
-		vec[
-			"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef"
-			"ghijklmnopqrstuvwxyz0123456789+/"[i]] = i;
-	}
-	int val = 0, valb = -8;
-	for (unsigned c = 0; c < in.size(); ++c) {
-		if (vec[in[c]] == -1) break;
-		val = (val << 6) + vec[in[c]];
-		valb += 6;
-		if (valb >= 0) {
-			out.push_back(char((val >> valb) & 0xFF));
-			valb -= 8;
-		}
-	}
-
-	return out;
-}
 
 //TODO: usar TLS con el certificado generado por el instalador
 static int request_callback(void *cls, struct MHD_Connection *connection,
