@@ -19,6 +19,7 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "firmador.h"
 #include "base64.h"
+#include "pin.h"
 
 #include <iostream>
 #include <string>
@@ -40,7 +41,7 @@ IMPLEMENT_APP(Firmador)
 //TODO: usar TLS con el certificado generado por el instalador
 static int request_callback(void *cls, struct MHD_Connection *connection,
 	const char *url, const char *method, const char *version,
-	const char *upload_data, size_t *upload_data_size, void **con_cls) {
+	const char *upload_data, std::size_t *upload_data_size, void **con_cls) {
 
 	struct MHD_Response *response;
 	int ret;
@@ -109,57 +110,6 @@ static int request_callback(void *cls, struct MHD_Connection *connection,
 	return ret;
 }
 
-static int pin_callback(void *userdata, int attempt, const char *token_url,
-	const char *token_label, unsigned int flags, char *pin,
-	size_t pin_max) {
-
-	(void) userdata;
-	(void) attempt;
-	(void) token_url;
-	int len;
-	wxString warning = wxT("");
-
-	if (flags & GNUTLS_PIN_FINAL_TRY) {
-		warning = warning + wxT("ADVERTENCIA: ¡ESTE ES EL ÚLTIMO ")
-			+ wxT("INTENTO ANTES DE BLOQUEAR LA TARJETA!\n\n");
-	}
-
-	if (flags & GNUTLS_PIN_COUNT_LOW) {
-		warning = warning + wxT("AVISO: ¡quedan pocos intentos antes ")
-			+ wxT("de BLOQUEAR la tarjeta!\n\n");
-	}
-
-	if (flags & GNUTLS_PIN_WRONG) {
-		warning = warning + wxT("PIN INCORRECTO\n\n");
-	}
-
-	wxPasswordEntryDialog pinDialog(NULL, warning
-		+ wxT("Introducir el PIN de la tarjeta ")
-		+ wxString(token_label, wxConvUTF8) + wxT(":"),
-		wxT("Introducción del PIN"), wxEmptyString,
-		wxTextEntryDialogStyle | wxSTAY_ON_TOP);
-
-	if (pinDialog.ShowModal() == wxID_OK) {
-		if (pinDialog.GetValue().mb_str(wxConvUTF8).data() == NULL
-			|| pinDialog.GetValue().mb_str(wxConvUTF8)
-				.data()[0] == 0) {
-			std::cerr << "No se ha introducido ningun valor."
-				<< std::endl;
-			exit(1);
-		}
-
-		len = std::min(pin_max - 1,
-			std::char_traits<char>::length(
-				pinDialog.GetValue().mb_str(wxConvUTF8)));
-		memcpy(pin, pinDialog.GetValue().mb_str(wxConvUTF8), len);
-		pin[len] = 0;
-
-		return 0;
-	} else {
-		exit(1);
-	}
-}
-
 bool Firmador::OnInit() {
 	struct MHD_Daemon *daemon;
 	struct sockaddr_in daemon_ip_addr;
@@ -219,7 +169,7 @@ bool Firmador::OnInit() {
 	}
 
 	std::vector<std::string> token_urls;
-	for (size_t i = 0; ; i++) {
+	for (std::size_t i = 0; ; i++) {
 		char* url;
 		ret = gnutls_pkcs11_token_get_url(i,
 			GNUTLS_PKCS11_URL_GENERIC, &url);
@@ -243,7 +193,7 @@ bool Firmador::OnInit() {
 	std::vector<unsigned int> token_obj_lists_sizes;
 	unsigned int obj_list_size = 0;
 
-	for (size_t i = 0; i < token_urls.size(); i++) {
+	for (std::size_t i = 0; i < token_urls.size(); i++) {
 		ret = gnutls_pkcs11_obj_list_import_url2(&obj_list,
 			&obj_list_size, token_urls.at(i).c_str(),
 			GNUTLS_PKCS11_OBJ_ATTR_CRT_ALL, 0);
@@ -254,9 +204,9 @@ bool Firmador::OnInit() {
 	wxArrayString cert_choices;
 	wxArrayString cert_captions;
 
-	for (size_t i = 0; i < token_obj_lists_sizes.size(); i++) {
+	for (std::size_t i = 0; i < token_obj_lists_sizes.size(); i++) {
 
-		for (size_t j = 0; j < token_obj_lists_sizes.at(i); j++) {
+		for (std::size_t j = 0; j < token_obj_lists_sizes.at(i); j++) {
 
 			gnutls_x509_crt_t cert;
 			gnutls_x509_crt_init(&cert);
@@ -271,19 +221,19 @@ bool Firmador::OnInit() {
 			if (keyusage & GNUTLS_KEY_NON_REPUDIATION) {
 
 				char nombre[32];
-				size_t nombre_size = sizeof(nombre);
+				std::size_t nombre_size = sizeof(nombre);
 				gnutls_x509_crt_get_dn_by_oid(cert,
 					GNUTLS_OID_X520_GIVEN_NAME, 0, 0,
 					nombre, &nombre_size);
 
 				char apellido[80];
-				size_t apellido_size = sizeof(apellido);
+				std::size_t apellido_size = sizeof(apellido);
 				gnutls_x509_crt_get_dn_by_oid(cert,
 					GNUTLS_OID_X520_SURNAME, 0, 0,
 					apellido, &apellido_size);
 
 				char cedula[128];
-				size_t cedula_size = sizeof(cedula);
+				std::size_t cedula_size = sizeof(cedula);
 				gnutls_x509_crt_get_dn_by_oid(cert, "2.5.4.5",
 					0, 0, cedula, &cedula_size);
 
@@ -622,7 +572,7 @@ bool Firmador::OnInit() {
 	gnutls_privkey_sign_data(key, GNUTLS_DIG_SHA256, 0, &data, &sig);
 
 	char sig_base64[1024];
-	size_t sig_base64_size = sizeof(sig_base64);
+	std::size_t sig_base64_size = sizeof(sig_base64);
 	gnutls_pem_base64_encode(NULL, &sig, sig_base64, &sig_base64_size);
 
 	std::string signatureValue(sig_base64, sig_base64_size);
@@ -632,8 +582,8 @@ bool Firmador::OnInit() {
 	gnutls_free(sig.data);
 	gnutls_privkey_deinit(key);
 
-	for (size_t i = 0; i < token_obj_lists_sizes.size(); i++) {
-		for (size_t j = 0; j < token_obj_lists_sizes.at(i); j++) {
+	for (std::size_t i = 0; i < token_obj_lists_sizes.size(); i++) {
+		for (std::size_t j = 0; j < token_obj_lists_sizes.at(i); j++) {
 			gnutls_pkcs11_obj_deinit(token_obj_lists.at(i)[j]);
 		}
 	}
