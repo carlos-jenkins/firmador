@@ -19,6 +19,7 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "request.h"
 
+#include <cstring>
 #include <iostream>
 
 //TODO: usar TLS con el certificado generado por el instalador

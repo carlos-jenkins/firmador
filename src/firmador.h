@@ -20,10 +20,7 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 #ifndef FIRMADOR_H
 #define FIRMADOR_H
 
-#include <sys/types.h>
 #ifndef _WIN32
-# include <sys/select.h>
-# include <sys/socket.h>
 # include <arpa/inet.h>
 #else
 # define UNICODE

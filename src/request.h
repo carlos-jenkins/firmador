@@ -20,6 +20,8 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 #ifndef FIRMADOR_REQUEST_H
 #define FIRMADOR_REQUEST_H
 
+#include <cstddef>
+
 #include <microhttpd.h>
 
 int request_callback(void *cls, struct MHD_Connection *connection,
