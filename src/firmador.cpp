@@ -221,6 +221,10 @@ bool Firmador::OnInit() {
 		//std::cout << "Seleccion: " << choiceDialog.GetSelection()
 		//	<< std::endl;
 	} else {
+		wxMessageBox(wxString(
+			"Se ha cancelado la selección de certificado.",
+			wxConvUTF8),
+			wxT("Certificado no seleccionado"));
 		return -1;
 	}
 
