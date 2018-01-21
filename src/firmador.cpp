@@ -23,7 +23,6 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "request.h"
 #include "uuid.h"
 
-#include <iostream>
 #include <string>
 #include <sstream>
 #include <vector>
@@ -38,24 +37,24 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 IMPLEMENT_APP(Firmador)
 
 bool Firmador::OnInit() {
-	struct MHD_Daemon *daemon;
 	struct sockaddr_in daemon_ip_addr;
-
 	memset(&daemon_ip_addr, 0, sizeof(struct sockaddr_in));
 	daemon_ip_addr.sin_family = AF_INET;
 	daemon_ip_addr.sin_port = htons(FIRMADOR_PORT);
 	daemon_ip_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
+	struct MHD_Daemon *daemon;
 	daemon = MHD_start_daemon(MHD_USE_SELECT_INTERNALLY,
 		FIRMADOR_PORT, NULL, NULL, &request_callback, NULL,
 		MHD_OPTION_SOCK_ADDR, &daemon_ip_addr, MHD_OPTION_END);
 	if (daemon == NULL) {
-		return 1;
+		wxMessageBox(wxString(
+			"No se ha podido iniciar el servicio firmador.\n"
+			"El puerto podría estar ocupado por otro servicio.",
+			wxConvUTF8),
+			wxT("Error al iniciar"), wxICON_ERROR);
+		exit(1);
 	}
-
-	//(void)getchar();
-
-	MHD_stop_daemon(daemon);
 
 	gnutls_pkcs11_set_pin_function(pin_callback, NULL);
 
@@ -64,9 +63,12 @@ bool Firmador::OnInit() {
 	ret = gnutls_pkcs11_init(GNUTLS_PKCS11_FLAG_MANUAL, NULL);
 
 	if (ret < GNUTLS_E_SUCCESS) {
-		std::cerr << "Error al inicializar: " << gnutls_strerror(ret)
-			<< std::endl;
-		exit(ret);
+		std::ostringstream error;
+		error << "Error al inicializar el proveedor: "
+			<< std::endl << gnutls_strerror(ret);
+		wxMessageBox(wxString(error.str().c_str(), wxConvUTF8),
+			wxT("Error al inicializar dispositivo"), wxICON_ERROR);
+		return ret;
 	}
 
 #ifdef __WIN32__
@@ -80,19 +82,21 @@ bool Firmador::OnInit() {
 	ret = gnutls_pkcs11_add_provider("/usr/lib/x64-athena/libASEP11.so",
 		NULL);
 #else
-	wxMessageBox(wxString("Sistema no soportado por el ", wxConvUTF8)
-		+ wxString("firmador.\n", wxConvUTF8)
-		+ wxString("El fabricante de la tarjeta ", wxConvUTF8)
-		+ wxString("solamente soporta Linux, macOS y ", wxConvUTF8)
-		+ wxString("Windows con procesadores x86.", wxConvUTF8),
+	wxMessageBox(wxString(
+		"Sistema no soportado por el firmador.\n"
+		"El fabricante de la tarjeta solamente soporta GNU/Linux, "
+		"macOS y Windows con procesadores x86 y x86_64.", wxConvUTF8),
 		wxT("Sistema no soportado"), wxICON_ERROR);
 	exit(1);
 #endif
 
 	if (ret < GNUTLS_E_SUCCESS) {
-		std::cerr << "Error al agregar proveedor: "
-			<< gnutls_strerror(ret) << std::endl;
-		exit(ret);
+		std::ostringstream error;
+		error << "Error al agregar proveedor:" << std::endl
+			<< gnutls_strerror(ret);
+		wxMessageBox(wxString(error.str().c_str(), wxConvUTF8),
+			wxT("Error al agregar proveedor"), wxICON_ERROR);
+		return ret;
 	}
 
 	std::vector<std::string> token_urls;
@@ -106,9 +110,11 @@ bool Firmador::OnInit() {
 		}
 
 		if (ret < GNUTLS_E_SUCCESS) {
-			std::cerr << "Error al obtener identificadores: "
-				<< gnutls_strerror(ret) << std::endl;
-			exit(ret);
+			std::ostringstream error;
+			error << "Error al obtener identificador:"
+				<< std::endl << gnutls_strerror(ret);
+			wxMessageBox(wxString(error.str().c_str(), wxConvUTF8),
+				wxT("Error al obtener token"), wxICON_ERROR);
 		}
 
 		token_urls.push_back(url);
@@ -124,6 +130,13 @@ bool Firmador::OnInit() {
 		ret = gnutls_pkcs11_obj_list_import_url2(&obj_list,
 			&obj_list_size, token_urls.at(i).c_str(),
 			GNUTLS_PKCS11_OBJ_ATTR_CRT_ALL, 0);
+		if (ret < GNUTLS_E_SUCCESS) {
+			std::ostringstream error;
+			error << "Error al importar objeto:"
+				<< std::endl << gnutls_strerror(ret);
+			wxMessageBox(wxString(error.str().c_str(), wxConvUTF8),
+				wxT("Error al importar objeto"), wxICON_ERROR);
+		}
 		token_obj_lists.push_back(obj_list);
 		token_obj_lists_sizes.push_back(obj_list_size);
 	}
@@ -170,8 +183,8 @@ bool Firmador::OnInit() {
 				std::string encryptionAlgorithm =
 					gnutls_pk_algorithm_get_name(
 						(gnutls_pk_algorithm_t)algo);
-				std::cout << "encryptionAlgoritm: "
-					<< encryptionAlgorithm << std::endl;
+				//std::cout << "encryptionAlgoritm: "
+				//	<< encryptionAlgorithm << std::endl;
 
 				std::ostringstream caption;
 				caption << nombre << " " << apellido << " ("
@@ -197,10 +210,10 @@ bool Firmador::OnInit() {
 		wxT("Selección de certificado"), cert_captions);
 
 	if (choiceDialog.ShowModal() == wxID_OK) {
-		std::cout << "Seleccion: " << choiceDialog.GetSelection()
-			<< std::endl;
+		//std::cout << "Seleccion: " << choiceDialog.GetSelection()
+		//	<< std::endl;
 	} else {
-		exit(1);
+		return -1;
 	}
 
 	rapidjson::StringBuffer stringBuffer;
@@ -482,22 +495,28 @@ bool Firmador::OnInit() {
 	gnutls_privkey_t key;
 	ret = gnutls_privkey_init(&key);
 	if (ret < GNUTLS_E_SUCCESS) {
-		std::cerr << "Error al inicializar la clave privada: "
-			<< gnutls_strerror(ret) << std::endl;
-		exit(ret);
+		std::ostringstream error;
+		error << "Error al inicializar la clave privada:" << std::endl
+			<< gnutls_strerror(ret);
+		wxMessageBox(wxString(error.str().c_str(), wxConvUTF8),
+			wxT("Error al inicializar clave"), wxICON_ERROR);
+		return ret;
 	}
 
 	/*
 	 * Tras seleccionarse, cargar el identificador correspondiente, esta
 	 * vez con PIN para poder usar la clave privada para poder firmar.
 	 */
-	gnutls_privkey_import_url(key,
+	ret = gnutls_privkey_import_url(key,
 		cert_choices.Item(
 			choiceDialog.GetSelection()).mb_str(wxConvUTF8), 0);
 	if (ret < GNUTLS_E_SUCCESS) {
-		std::cerr << "Error al importar la URL de la clave privada: "
-			<< gnutls_strerror(ret) << std::endl;
-		exit(ret);
+		std::ostringstream error;
+		error << "Error al importar la URL de la clave privada:"
+			<< std::endl << gnutls_strerror(ret);
+		wxMessageBox(wxString(error.str().c_str(), wxConvUTF8),
+			wxT("Error al importar URL de clave"), wxICON_ERROR);
+		return ret;
 	}
 
 	std::string datos_base64 =
@@ -507,7 +526,15 @@ bool Firmador::OnInit() {
 		(unsigned)datos.length()};
 
 	gnutls_datum_t sig;
-	gnutls_privkey_sign_data(key, GNUTLS_DIG_SHA256, 0, &data, &sig);
+	ret = gnutls_privkey_sign_data(key, GNUTLS_DIG_SHA256, 0, &data, &sig);
+	if (ret < GNUTLS_E_SUCCESS) {
+		std::ostringstream error;
+		error << "Error al firmar:"
+			<< std::endl << gnutls_strerror(ret);
+		wxMessageBox(wxString(error.str().c_str(), wxConvUTF8),
+			wxT("Error al firmar"), wxICON_ERROR);
+		return ret;
+	}
 
 	char sig_base64[1024];
 	std::size_t sig_base64_size = sizeof(sig_base64);
@@ -515,7 +542,7 @@ bool Firmador::OnInit() {
 
 	std::string signatureValue(sig_base64, sig_base64_size);
 
-	std::cout << "signatureValue: " << signatureValue << std::endl;
+	//std::cout << "signatureValue: " << signatureValue << std::endl;
 
 	gnutls_free(sig.data);
 	gnutls_privkey_deinit(key);

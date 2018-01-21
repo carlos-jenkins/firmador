@@ -19,8 +19,6 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "pin.h"
 
-#include <iostream>
-
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
 # include <wx/wx.h>
@@ -62,9 +60,11 @@ int pin_callback(void *userdata, int attempt, const char *token_url,
 		if (pinDialog.GetValue().mb_str(wxConvUTF8).data() == NULL
 			|| pinDialog.GetValue().mb_str(wxConvUTF8)
 				.data()[0] == 0) {
-			std::cerr << "No se ha introducido ningun valor."
-				<< std::endl;
-			exit(1);
+			wxMessageBox(
+				wxString("No se ha introducido ningún valor",
+					wxConvUTF8),
+				wxT("PIN en blanco"));
+			return -1;
 		}
 
 		len = std::min(pin_max - 1,
@@ -75,6 +75,6 @@ int pin_callback(void *userdata, int attempt, const char *token_url,
 
 		return 0;
 	} else {
-		exit(1);
+		return -1;
 	}
 }
