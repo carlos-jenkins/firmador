@@ -185,6 +185,18 @@ bool Firmador::OnInit() {
 						(gnutls_pk_algorithm_t)algo);
 				//std::cout << "encryptionAlgoritm: "
 				//	<< encryptionAlgorithm << std::endl;
+				char cert_id[32];
+				std::size_t cert_id_size = sizeof(cert_id);
+				gnutls_x509_crt_get_fingerprint(cert,
+					GNUTLS_DIG_SHA256, cert_id,
+					&cert_id_size);
+				gnutls_datum_t certId_bin = {
+					(unsigned char*)cert_id,
+					(unsigned)cert_id_size};
+				gnutls_datum_t certId;
+				gnutls_hex_encode2(&certId_bin, &certId);
+				//std::cout << "certId: " << certId.data
+				//	<< std::endl;
 
 				std::ostringstream caption;
 				caption << nombre << " " << apellido << " ("
@@ -218,8 +230,6 @@ bool Firmador::OnInit() {
 				wxICON_ERROR);
 			return -1;
 		}
-		//std::cout << "Seleccion: " << choiceDialog.GetSelection()
-		//	<< std::endl;
 	} else {
 		wxMessageBox(wxString(
 			"Se ha cancelado la selección de certificado.",
