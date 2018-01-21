@@ -21,6 +21,7 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "base64.h"
 #include "pin.h"
 #include "request.h"
+#include "uuid.h"
 
 #include <iostream>
 #include <string>
@@ -196,6 +197,8 @@ bool Firmador::OnInit() {
 	rapidjson::StringBuffer stringBuffer;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(stringBuffer);
 
+	std::string id = uuid();
+
 	writer.StartObject();
 	writer.Key("success");
 	writer.Bool(true);
@@ -204,7 +207,7 @@ bool Firmador::OnInit() {
 	writer.Key("tokenId");
 	writer.StartObject();
 	writer.Key("id");
-	writer.String("12345678-1234-1234-1234-123456789012");
+	writer.String(id.c_str());
 	writer.EndObject();
 	writer.Key("keyId");
 	writer.String("D8363BD6BD2FE30C4191CD5BB05A97E7556EFE01F207C459D81DEC58186BF665");
