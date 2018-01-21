@@ -164,6 +164,15 @@ bool Firmador::OnInit() {
 				gnutls_x509_crt_get_dn_by_oid(cert, "2.5.4.5",
 					0, 0, cedula, &cedula_size);
 
+				unsigned int bits;
+				int algo = gnutls_x509_crt_get_pk_algorithm(
+					cert, &bits);
+				std::string encryptionAlgorithm =
+					gnutls_pk_algorithm_get_name(
+						(gnutls_pk_algorithm_t)algo);
+				std::cout << "encryptionAlgoritm: "
+					<< encryptionAlgorithm << std::endl;
+
 				std::ostringstream caption;
 				caption << nombre << " " << apellido << " ("
 					<< cedula << ")";
