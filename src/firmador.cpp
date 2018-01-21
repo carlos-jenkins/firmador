@@ -210,6 +210,14 @@ bool Firmador::OnInit() {
 		wxT("Selección de certificado"), cert_captions);
 
 	if (choiceDialog.ShowModal() == wxID_OK) {
+		if (cert_captions.IsEmpty()) {
+			wxMessageBox(wxString(
+				"No se ha seleccionado ningún certificado.",
+				wxConvUTF8),
+				wxT("Certificado no seleccionado"),
+				wxICON_ERROR);
+			return -1;
+		}
 		//std::cout << "Seleccion: " << choiceDialog.GetSelection()
 		//	<< std::endl;
 	} else {
