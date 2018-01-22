@@ -197,6 +197,15 @@ bool Firmador::OnInit() {
 				gnutls_hex_encode2(&certId_bin, &certId);
 				//std::cout << "certId: " << certId.data
 				//	<< std::endl;
+				gnutls_datum_t cert_der;
+				gnutls_x509_crt_export2(cert,
+					GNUTLS_X509_FMT_DER, &cert_der);
+				gnutls_datum_t certificate;
+				gnutls_pem_base64_encode_alloc(NULL, &cert_der,
+					&certificate);
+				//std::cout << "certificate: "
+				//	<< certificate.data
+				//	<< std::endl;
 
 				std::ostringstream caption;
 				caption << nombre << " " << apellido << " ("
@@ -558,13 +567,10 @@ bool Firmador::OnInit() {
 		return ret;
 	}
 
-	char sig_base64[1024];
-	std::size_t sig_base64_size = sizeof(sig_base64);
-	gnutls_pem_base64_encode(NULL, &sig, sig_base64, &sig_base64_size);
+	gnutls_datum_t signatureValue;
+	gnutls_pem_base64_encode_alloc(NULL, &sig, &signatureValue);
 
-	std::string signatureValue(sig_base64, sig_base64_size);
-
-	//std::cout << "signatureValue: " << signatureValue << std::endl;
+	//std::cout << "signatureValue: " << signatureValue.data << std::endl;
 
 	gnutls_free(sig.data);
 	gnutls_privkey_deinit(key);
