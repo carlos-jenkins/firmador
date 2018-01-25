@@ -23,6 +23,7 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "request.h"
 #include "uuid.h"
 
+#include <algorithm>
 #include <string>
 #include <sstream>
 #include <vector>
@@ -185,18 +186,22 @@ bool Firmador::OnInit() {
 						(gnutls_pk_algorithm_t)algo);
 				//std::cout << "encryptionAlgoritm: "
 				//	<< encryptionAlgorithm << std::endl;
-				char cert_id[32];
-				std::size_t cert_id_size = sizeof(cert_id);
+				char key_id[32];
+				std::size_t key_id_size = sizeof(key_id);
 				gnutls_x509_crt_get_fingerprint(cert,
-					GNUTLS_DIG_SHA256, cert_id,
-					&cert_id_size);
-				gnutls_datum_t certId_bin = {
-					(unsigned char*)cert_id,
-					(unsigned)cert_id_size};
-				gnutls_datum_t certId;
-				gnutls_hex_encode2(&certId_bin, &certId);
-				//std::cout << "certId: " << certId.data
-				//	<< std::endl;
+					GNUTLS_DIG_SHA256, key_id,
+					&key_id_size);
+				gnutls_datum_t key_id_bin = {
+					(unsigned char*)key_id,
+					(unsigned)key_id_size};
+				gnutls_datum_t key_id_cstr;
+				gnutls_hex_encode2(&key_id_bin, &key_id_cstr);
+				std::string keyId(
+					(const char*)key_id_cstr.data);
+				std::transform(keyId.begin(), keyId.end(),
+					keyId.begin(), ::toupper);
+				std::cout << "keyId: " << keyId << std::endl;
+
 				gnutls_datum_t cert_der;
 				gnutls_x509_crt_export2(cert,
 					GNUTLS_X509_FMT_DER, &cert_der);
