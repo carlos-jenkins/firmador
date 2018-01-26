@@ -11,6 +11,7 @@ AM_SILENT_RULES([yes])
 
 AC_CONFIG_SRCDIR([src/firmador.cpp])
 AC_CONFIG_HEADERS([config.h])
+AC_CANONICAL_HOST
 
 # Checks for programs.
 AC_PROG_CXX
@@ -20,9 +21,10 @@ m4_ifdef([PKG_PROG_PKG_CONFIG], [PKG_PROG_PKG_CONFIG],
 # Checks for libraries.
 PKG_CHECK_MODULES([GNUTLS], [gnutls])
 PKG_CHECK_MODULES([MICROHTTPD], [libmicrohttpd])
-m4_ifdef([AM_OPTIONS_WXCONFIG], [AM_OPTIONS_WXCONFIG],
-	[AC_MSG_ERROR([wxWidgets not found.])])
-AM_PATH_WXCONFIG([2.8.12], [wxWin=1])
+m4_ifdef([AM_OPTIONS_WXCONFIG], [
+	AM_OPTIONS_WXCONFIG
+	AM_PATH_WXCONFIG([2.8.12], [wxWin=1])
+], [AC_MSG_ERROR([wxWidgets not found.])])
 AS_IF([test "$wxWin" != 1], [AC_MSG_ERROR([wx-config not found.])])
 AS_CASE([$host], [*-mingw*], [
 	AC_SUBST([MINGW_LIBS], ["-lws2_32"])
