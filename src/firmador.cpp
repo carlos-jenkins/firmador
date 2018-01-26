@@ -200,7 +200,7 @@ bool Firmador::OnInit() {
 					(const char*)key_id_cstr.data);
 				std::transform(keyId.begin(), keyId.end(),
 					keyId.begin(), ::toupper);
-				std::cout << "keyId: " << keyId << std::endl;
+				//std::cout << "keyId: " << keyId << std::endl;
 
 				gnutls_datum_t cert_der;
 				gnutls_x509_crt_export2(cert,
