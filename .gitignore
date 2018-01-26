@@ -1,6 +1,8 @@
 /aclocal.m4
 /autom4te.cache/
 /compile
+/config.guess
+/config.sub
 /config.h
 /config.h.in
 /config.log
