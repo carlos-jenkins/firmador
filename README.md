@@ -87,6 +87,10 @@ instalar las dependencias con:
 SUSE Linux Enterprise Server 12 requiere instalar `rapidjson` aparte, ya sea
 copiando la carpeta de cabeceras o mediante paquete externo.
 
+En macOS se pueden instalar las dependencias con [Homebrew](https://brew.sh/):
+
+    $ brew install wxmac gnutls libmicrohttpd rapidjson automake autoconf pkg-config
+
 
 ### Compilación
 
