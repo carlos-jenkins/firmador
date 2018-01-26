@@ -91,6 +91,11 @@ En macOS se pueden instalar las dependencias con [Homebrew](https://brew.sh/):
 
     $ brew install wxmac gnutls libmicrohttpd rapidjson automake autoconf pkg-config
 
+En Windows se pueden instalar las dependencias con
+[MSYS2](http://www.msys2.org/) en la consola MSYS2 MinGW 32-bit con:
+
+    $ pacman -Su --noconfirm git make autoconf automake mingw-w64-i686-{pkg-config,make,gcc,wxWidgets,gnutls,rapidjson}
+
 
 ### Compilación
 
