@@ -19,11 +19,13 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "firmador.h"
 #include "base64.h"
+#include "certificate.h"
 #include "pin.h"
 #include "request.h"
 #include "uuid.h"
 
 #include <algorithm>
+#include <iostream>
 #include <string>
 #include <sstream>
 #include <vector>
@@ -144,6 +146,7 @@ bool Firmador::OnInit() {
 
 	wxArrayString cert_choices;
 	wxArrayString cert_captions;
+	certificate_t certificate;
 
 	for (std::size_t i = 0; i < token_obj_lists_sizes.size(); i++) {
 
@@ -156,8 +159,7 @@ bool Firmador::OnInit() {
 				token_obj_lists.at(i)[j]);
 
 			unsigned int keyusage;
-			gnutls_x509_crt_get_key_usage(cert, &keyusage,
-				NULL);
+			gnutls_x509_crt_get_key_usage(cert, &keyusage, NULL);
 
 			if (keyusage & GNUTLS_KEY_NON_REPUDIATION) {
 
@@ -181,11 +183,10 @@ bool Firmador::OnInit() {
 				unsigned int bits;
 				int algo = gnutls_x509_crt_get_pk_algorithm(
 					cert, &bits);
-				std::string encryptionAlgorithm =
+				certificate.encryptionAlgorithm =
 					gnutls_pk_algorithm_get_name(
 						(gnutls_pk_algorithm_t)algo);
-				//std::cout << "encryptionAlgoritm: "
-				//	<< encryptionAlgorithm << std::endl;
+
 				char key_id[32];
 				std::size_t key_id_size = sizeof(key_id);
 				gnutls_x509_crt_get_fingerprint(cert,
@@ -196,21 +197,20 @@ bool Firmador::OnInit() {
 					(unsigned)key_id_size};
 				gnutls_datum_t key_id_cstr;
 				gnutls_hex_encode2(&key_id_bin, &key_id_cstr);
-				std::string keyId(
-					(const char*)key_id_cstr.data);
-				std::transform(keyId.begin(), keyId.end(),
-					keyId.begin(), ::toupper);
-				//std::cout << "keyId: " << keyId << std::endl;
+				certificate.keyId =
+					(const char*)key_id_cstr.data;
+				std::transform(certificate.keyId.begin(),
+					certificate.keyId.end(),
+					certificate.keyId.begin(), ::toupper);
 
 				gnutls_datum_t cert_der;
 				gnutls_x509_crt_export2(cert,
 					GNUTLS_X509_FMT_DER, &cert_der);
-				gnutls_datum_t certificate;
+				gnutls_datum_t certificate_cstr;
 				gnutls_pem_base64_encode_alloc(NULL, &cert_der,
-					&certificate);
-				//std::cout << "certificate: "
-				//	<< certificate.data
-				//	<< std::endl;
+					&certificate_cstr);
+				certificate.certificate =
+					(const char*) certificate_cstr.data;
 
 				std::ostringstream caption;
 				caption << nombre << " " << apellido << " ("
@@ -252,10 +252,61 @@ bool Firmador::OnInit() {
 		return -1;
 	}
 
+	gnutls_privkey_t key;
+	ret = gnutls_privkey_init(&key);
+	if (ret < GNUTLS_E_SUCCESS) {
+		std::ostringstream error;
+		error << "Error al inicializar la clave privada:" << std::endl
+			<< gnutls_strerror(ret);
+		wxMessageBox(wxString(error.str().c_str(), wxConvUTF8),
+			wxT("Error al inicializar clave"), wxICON_ERROR);
+		return ret;
+	}
+
+	/*
+	 * Tras seleccionarse, cargar el identificador correspondiente, esta
+	 * vez con PIN para poder usar la clave privada para poder firmar.
+	 */
+/*
+	ret = gnutls_privkey_import_url(key,
+		cert_choices.Item(
+			choiceDialog.GetSelection()).mb_str(wxConvUTF8), 0);
+	if (ret < GNUTLS_E_SUCCESS) {
+		std::ostringstream error;
+		error << "Error al importar la URL de la clave privada:"
+			<< std::endl << gnutls_strerror(ret);
+		wxMessageBox(wxString(error.str().c_str(), wxConvUTF8),
+			wxT("Error al importar URL de clave"), wxICON_ERROR);
+		return ret;
+	}
+
+	// FIXME: obtener datos desde /rest/sign
+	std::string datos_base64 =
+		"MYIBUzAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMC8GCSqGSIb3DQEJBDEiBCDALgEEhMr4mMg9m1MJ1vQBKXm/BcZrdi7E1GJaN6Nd2DCCAQQGCyqGSIb3DQEJEAIvMYH0MIHxMIHuMIHrMA0GCWCGSAFlAwQCAQUABCDYNjvWvS/jDEGRzVuwWpfnVW7+AfIHxFnYHexYGGv2ZTCBtzCBn6SBnDCBmTEZMBcGA1UEBRMQQ1BKLTQtMDAwLTAwNDAxNzELMAkGA1UEBhMCQ1IxJDAiBgNVBAoTG0JBTkNPIENFTlRSQUwgREUgQ09TVEEgUklDQTEiMCAGA1UECxMZRElWSVNJT04gU0lTVEVNQVMgREUgUEFHTzElMCMGA1UEAxMcQ0EgU0lOUEUgLSBQRVJTT05BIEZJU0lDQSB2MgITFAABH/a5gZb8gqHY/AAAAAEf9g==";
+	std::string datos = base64_decode(datos_base64);
+	gnutls_datum_t data = {(unsigned char*)datos.c_str(),
+		(unsigned)datos.length()};
+
+	gnutls_datum_t sig;
+	ret = gnutls_privkey_sign_data(key, GNUTLS_DIG_SHA256, 0, &data, &sig);
+	if (ret < GNUTLS_E_SUCCESS) {
+		std::ostringstream error;
+		error << "Error al firmar:"
+			<< std::endl << gnutls_strerror(ret);
+		wxMessageBox(wxString(error.str().c_str(), wxConvUTF8),
+			wxT("Error al firmar"), wxICON_ERROR);
+		return ret;
+	}
+
+	gnutls_datum_t signatureValue;
+	gnutls_pem_base64_encode_alloc(NULL, &sig, &signatureValue);
+	std::cout << "signatureValue: " << signatureValue.data << std::endl;
+*/
+
+	certificate.id = uuid();
+
 	rapidjson::StringBuffer stringBuffer;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(stringBuffer);
-
-	std::string id = uuid();
 
 	writer.StartObject();
 	writer.Key("success");
@@ -265,79 +316,17 @@ bool Firmador::OnInit() {
 	writer.Key("tokenId");
 	writer.StartObject();
 	writer.Key("id");
-	writer.String(id.c_str());
+	writer.String(certificate.id.c_str());
 	writer.EndObject();
 	writer.Key("keyId");
-	writer.String("D8363BD6BD2FE30C4191CD5BB05A97E7556EFE01F207C459D81DEC58186BF665");
+	writer.String(certificate.keyId.c_str());
 	writer.Key("certificate");
-	writer.String(
-		"MIIFuTCCBKGgAwIBAgITFAABH/a5gZb8gqHY/AAAAAEf9jANBgkqhkiG9w0BAQsF"
-		"ADCBmTEZMBcGA1UEBRMQQ1BKLTQtMDAwLTAwNDAxNzELMAkGA1UEBhMCQ1IxJDAi"
-		"BgNVBAoTG0JBTkNPIENFTlRSQUwgREUgQ09TVEEgUklDQTEiMCAGA1UECxMZRElW"
-		"SVNJT04gU0lTVEVNQVMgREUgUEFHTzElMCMGA1UEAxMcQ0EgU0lOUEUgLSBQRVJT"
-		"T05BIEZJU0lDQSB2MjAeFw0xNzAyMTcxOTUyMTZaFw0yMTAyMTYxOTUyMTZaMIG7"
-		"MRkwFwYDVQQFExBDUEYtMDgtMDExOS0wNTkyMR4wHAYDVQQEDBVERSBMQSBQRcOR"
-		"QSBGRVJOQU5ERVoxEjAQBgNVBCoTCUZSQU5DSVNDTzELMAkGA1UEBhMCQ1IxFzAV"
-		"BgNVBAoTDlBFUlNPTkEgRklTSUNBMRIwEAYDVQQLEwlDSVVEQURBTk8xMDAuBgNV"
-		"BAMMJ0ZSQU5DSVNDTyBERSBMQSBQRcORQSBGRVJOQU5ERVogKEZJUk1BKTCCASIw"
-		"DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBANEwGLI0tTAuRSamUFtO69dvREWZ"
-		"mZ05WivpREENs1sYlRcdlVLN3V7gXgGZLGd0EorgQFh1SsIf5wRXdi+W2tlxqwel"
-		"QQVqOPL6dIeY9SHjtlBqzYizLBf4nO2NtEpb9D40fUiNWM5XbScPt1MdWQjxqiTw"
-		"wzzKiYMzRRudfiYp11tfRfQ0o3YhiYGMny92zaEnTKGwIyBn3+467fyhLpyuDUv5"
-		"bY/0AJkxJshdcfTL6Wk04RUQLJoK1X6/f45fXqGYJr9foJlL2TTjsA3Z/BE9manO"
-		"I4JNdPgmT+exDIsNmrHf8iNvvclNo7F5CHQo2ZQwFL3Cvn8A8rG5Iu7wxAECAwEA"
-		"AaOCAdQwggHQMB0GA1UdDgQWBBRsEVTpU9pDREKQDn/fF08VmzWXbDAfBgNVHSME"
-		"GDAWgBS0dIurntt28H+lKOOUrTHMcvCzKTBeBgNVHR8EVzBVMFOgUaBPhk1odHRw"
-		"Oi8vZmRpLnNpbnBlLmZpLmNyL3JlcG9zaXRvcmlvL0NBJTIwU0lOUEUlMjAtJTIw"
-		"UEVSU09OQSUyMEZJU0lDQSUyMHYyLmNybDCBlQYIKwYBBQUHAQEEgYgwgYUwWQYI"
-		"KwYBBQUHMAKGTWh0dHA6Ly9mZGkuc2lucGUuZmkuY3IvcmVwb3NpdG9yaW8vQ0El"
-		"MjBTSU5QRSUyMC0lMjBQRVJTT05BJTIwRklTSUNBJTIwdjIuY3J0MCgGCCsGAQUF"
-		"BzABhhxodHRwOi8vb2NzcC5zaW5wZS5maS5jci9vY3NwMA4GA1UdDwEB/wQEAwIG"
-		"wDA9BgkrBgEEAYI3FQcEMDAuBiYrBgEEAYI3FQiFxOpbgtHjNZWRG4L5lxiGpctr"
-		"gX+BudJygZ6/eAIBZAIBBzATBgNVHSUEDDAKBggrBgEFBQcDBDAbBgkrBgEEAYI3"
-		"FQoEDjAMMAoGCCsGAQUFBwMEMBUGA1UdIAQOMAwwCgYIYIE8AQEBAQIwDQYJKoZI"
-		"hvcNAQELBQADggEBANRbQKYeFjiqnLMCiE7B+deWmGqtskuQMRMrj0OrsN+LFlHd"
-		"AJ/Zia43gsvf/rzrFYJm9uPRZGGLtUV853yazekWUcbPLLLCX33F/aY6h4h4WkAR"
-		"KM33WWqC6n5DEp1HnFbsqNJ597VPniO4BCpA8+qRRsfUPWJgLXOll2B4tCZ0mcUg"
-		"DHZELukTdE06Xocu9X0MgxdbqIU0CIdy7h0RpkAnyut8Hcdklkd4RkN/Y15/aSIa"
-		"xt35Tz7hJWWDdHON+/JLqlnTDze0EvIeiHsPN5jhAxNbLZT0rrhtcb2Q3Z11SjbP"
-		"Awzv9VKU1c7OJsHer1mFZbxfp0nXmxb66fbvUsw=");
+	writer.String(certificate.certificate.c_str());
 
 	writer.Key("certificateChain");
 	writer.StartArray();
 
-	writer.String(
-		"MIIFuTCCBKGgAwIBAgITFAABH/a5gZb8gqHY/AAAAAEf9jANBgkqhkiG9w0BAQsF"
-		"ADCBmTEZMBcGA1UEBRMQQ1BKLTQtMDAwLTAwNDAxNzELMAkGA1UEBhMCQ1IxJDAi"
-		"BgNVBAoTG0JBTkNPIENFTlRSQUwgREUgQ09TVEEgUklDQTEiMCAGA1UECxMZRElW"
-		"SVNJT04gU0lTVEVNQVMgREUgUEFHTzElMCMGA1UEAxMcQ0EgU0lOUEUgLSBQRVJT"
-		"T05BIEZJU0lDQSB2MjAeFw0xNzAyMTcxOTUyMTZaFw0yMTAyMTYxOTUyMTZaMIG7"
-		"MRkwFwYDVQQFExBDUEYtMDgtMDExOS0wNTkyMR4wHAYDVQQEDBVERSBMQSBQRcOR"
-		"QSBGRVJOQU5ERVoxEjAQBgNVBCoTCUZSQU5DSVNDTzELMAkGA1UEBhMCQ1IxFzAV"
-		"BgNVBAoTDlBFUlNPTkEgRklTSUNBMRIwEAYDVQQLEwlDSVVEQURBTk8xMDAuBgNV"
-		"BAMMJ0ZSQU5DSVNDTyBERSBMQSBQRcORQSBGRVJOQU5ERVogKEZJUk1BKTCCASIw"
-		"DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBANEwGLI0tTAuRSamUFtO69dvREWZ"
-		"mZ05WivpREENs1sYlRcdlVLN3V7gXgGZLGd0EorgQFh1SsIf5wRXdi+W2tlxqwel"
-		"QQVqOPL6dIeY9SHjtlBqzYizLBf4nO2NtEpb9D40fUiNWM5XbScPt1MdWQjxqiTw"
-		"wzzKiYMzRRudfiYp11tfRfQ0o3YhiYGMny92zaEnTKGwIyBn3+467fyhLpyuDUv5"
-		"bY/0AJkxJshdcfTL6Wk04RUQLJoK1X6/f45fXqGYJr9foJlL2TTjsA3Z/BE9manO"
-		"I4JNdPgmT+exDIsNmrHf8iNvvclNo7F5CHQo2ZQwFL3Cvn8A8rG5Iu7wxAECAwEA"
-		"AaOCAdQwggHQMB0GA1UdDgQWBBRsEVTpU9pDREKQDn/fF08VmzWXbDAfBgNVHSME"
-		"GDAWgBS0dIurntt28H+lKOOUrTHMcvCzKTBeBgNVHR8EVzBVMFOgUaBPhk1odHRw"
-		"Oi8vZmRpLnNpbnBlLmZpLmNyL3JlcG9zaXRvcmlvL0NBJTIwU0lOUEUlMjAtJTIw"
-		"UEVSU09OQSUyMEZJU0lDQSUyMHYyLmNybDCBlQYIKwYBBQUHAQEEgYgwgYUwWQYI"
-		"KwYBBQUHMAKGTWh0dHA6Ly9mZGkuc2lucGUuZmkuY3IvcmVwb3NpdG9yaW8vQ0El"
-		"MjBTSU5QRSUyMC0lMjBQRVJTT05BJTIwRklTSUNBJTIwdjIuY3J0MCgGCCsGAQUF"
-		"BzABhhxodHRwOi8vb2NzcC5zaW5wZS5maS5jci9vY3NwMA4GA1UdDwEB/wQEAwIG"
-		"wDA9BgkrBgEEAYI3FQcEMDAuBiYrBgEEAYI3FQiFxOpbgtHjNZWRG4L5lxiGpctr"
-		"gX+BudJygZ6/eAIBZAIBBzATBgNVHSUEDDAKBggrBgEFBQcDBDAbBgkrBgEEAYI3"
-		"FQoEDjAMMAoGCCsGAQUFBwMEMBUGA1UdIAQOMAwwCgYIYIE8AQEBAQIwDQYJKoZI"
-		"hvcNAQELBQADggEBANRbQKYeFjiqnLMCiE7B+deWmGqtskuQMRMrj0OrsN+LFlHd"
-		"AJ/Zia43gsvf/rzrFYJm9uPRZGGLtUV853yazekWUcbPLLLCX33F/aY6h4h4WkAR"
-		"KM33WWqC6n5DEp1HnFbsqNJ597VPniO4BCpA8+qRRsfUPWJgLXOll2B4tCZ0mcUg"
-		"DHZELukTdE06Xocu9X0MgxdbqIU0CIdy7h0RpkAnyut8Hcdklkd4RkN/Y15/aSIa"
-		"xt35Tz7hJWWDdHON+/JLqlnTDze0EvIeiHsPN5jhAxNbLZT0rrhtcb2Q3Z11SjbP"
-		"Awzv9VKU1c7OJsHer1mFZbxfp0nXmxb66fbvUsw=");
+	writer.String(certificate.certificate.c_str());
 
 	// CA SINPE - PERSONA FISICA v2
 	writer.String(
@@ -522,62 +511,13 @@ bool Firmador::OnInit() {
 
 	writer.EndArray();
 	writer.Key("encryptionAlgorithm");
-	writer.String("RSA");
+	writer.String(certificate.encryptionAlgorithm.c_str());
 	writer.EndObject();
 	writer.EndObject();
 
-	//std::cout << stringBuffer.GetString() << std::endl;
+	std::cout << stringBuffer.GetString() << std::endl;
 
-	gnutls_privkey_t key;
-	ret = gnutls_privkey_init(&key);
-	if (ret < GNUTLS_E_SUCCESS) {
-		std::ostringstream error;
-		error << "Error al inicializar la clave privada:" << std::endl
-			<< gnutls_strerror(ret);
-		wxMessageBox(wxString(error.str().c_str(), wxConvUTF8),
-			wxT("Error al inicializar clave"), wxICON_ERROR);
-		return ret;
-	}
-
-	/*
-	 * Tras seleccionarse, cargar el identificador correspondiente, esta
-	 * vez con PIN para poder usar la clave privada para poder firmar.
-	 */
-	ret = gnutls_privkey_import_url(key,
-		cert_choices.Item(
-			choiceDialog.GetSelection()).mb_str(wxConvUTF8), 0);
-	if (ret < GNUTLS_E_SUCCESS) {
-		std::ostringstream error;
-		error << "Error al importar la URL de la clave privada:"
-			<< std::endl << gnutls_strerror(ret);
-		wxMessageBox(wxString(error.str().c_str(), wxConvUTF8),
-			wxT("Error al importar URL de clave"), wxICON_ERROR);
-		return ret;
-	}
-
-	std::string datos_base64 =
-		"MYIBUzAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMC8GCSqGSIb3DQEJBDEiBCDALgEEhMr4mMg9m1MJ1vQBKXm/BcZrdi7E1GJaN6Nd2DCCAQQGCyqGSIb3DQEJEAIvMYH0MIHxMIHuMIHrMA0GCWCGSAFlAwQCAQUABCDYNjvWvS/jDEGRzVuwWpfnVW7+AfIHxFnYHexYGGv2ZTCBtzCBn6SBnDCBmTEZMBcGA1UEBRMQQ1BKLTQtMDAwLTAwNDAxNzELMAkGA1UEBhMCQ1IxJDAiBgNVBAoTG0JBTkNPIENFTlRSQUwgREUgQ09TVEEgUklDQTEiMCAGA1UECxMZRElWSVNJT04gU0lTVEVNQVMgREUgUEFHTzElMCMGA1UEAxMcQ0EgU0lOUEUgLSBQRVJTT05BIEZJU0lDQSB2MgITFAABH/a5gZb8gqHY/AAAAAEf9g==";
-	std::string datos = base64_decode(datos_base64);
-	gnutls_datum_t data = {(unsigned char*)datos.c_str(),
-		(unsigned)datos.length()};
-
-	gnutls_datum_t sig;
-	ret = gnutls_privkey_sign_data(key, GNUTLS_DIG_SHA256, 0, &data, &sig);
-	if (ret < GNUTLS_E_SUCCESS) {
-		std::ostringstream error;
-		error << "Error al firmar:"
-			<< std::endl << gnutls_strerror(ret);
-		wxMessageBox(wxString(error.str().c_str(), wxConvUTF8),
-			wxT("Error al firmar"), wxICON_ERROR);
-		return ret;
-	}
-
-	gnutls_datum_t signatureValue;
-	gnutls_pem_base64_encode_alloc(NULL, &sig, &signatureValue);
-
-	//std::cout << "signatureValue: " << signatureValue.data << std::endl;
-
-	gnutls_free(sig.data);
+//	gnutls_free(sig.data);
 	gnutls_privkey_deinit(key);
 
 	for (std::size_t i = 0; i < token_obj_lists_sizes.size(); i++) {

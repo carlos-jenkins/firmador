@@ -5,6 +5,7 @@ bin_PROGRAMS = firmador
 firmador_SOURCES = \
 	src/base64.cpp \
 	src/base64.h \
+	src/certificate.h \
 	src/firmador.cpp \
 	src/firmador.h \
 	src/pin.cpp \
