@@ -35,8 +35,6 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 
-#define FIRMADOR_PORT 50600
-
 IMPLEMENT_APP(Firmador)
 
 bool Firmador::OnInit() {
@@ -74,16 +72,13 @@ bool Firmador::OnInit() {
 		return ret;
 	}
 
-#ifdef __WIN32__
 	std::ostringstream path;
+#ifdef __WIN32__
 	path << getenv("WINDIR") << "\\System32\\asepkcs.dll";
-	ret = gnutls_pkcs11_add_provider(path.str().c_str(), NULL);
 #elif __WXOSX_MAC__
-	ret = gnutls_pkcs11_add_provider(
-		"/Library/Application Support/Athena/libASEP11.dylib", NULL);
+	path << "/Library/Application Support/Athena/libASEP11.dylib";
 #elif __LINUX__
-	ret = gnutls_pkcs11_add_provider("/usr/lib/x64-athena/libASEP11.so",
-		NULL);
+	path << "/usr/lib/x64-athena/libASEP11.so";
 #else
 	wxMessageBox(wxString(
 		"Sistema no soportado por el firmador.\n"
@@ -92,7 +87,7 @@ bool Firmador::OnInit() {
 		wxT("Sistema no soportado"), wxICON_ERROR);
 	exit(1);
 #endif
-
+	ret = gnutls_pkcs11_add_provider(path.str().c_str(), NULL);
 	if (ret < GNUTLS_E_SUCCESS) {
 		std::ostringstream error;
 		error << "Error al agregar proveedor:" << std::endl
@@ -322,12 +317,9 @@ bool Firmador::OnInit() {
 	writer.String(certificate.keyId.c_str());
 	writer.Key("certificate");
 	writer.String(certificate.certificate.c_str());
-
 	writer.Key("certificateChain");
 	writer.StartArray();
-
 	writer.String(certificate.certificate.c_str());
-
 	// CA SINPE - PERSONA FISICA v2
 	writer.String(
 		"MIINADCCCuigAwIBAgITSwAAAAMTyepkVGDdawAAAAAAAzANBgkqhkiG9w0BAQ0F"
@@ -401,7 +393,6 @@ bool Firmador::OnInit() {
 		"co+s0Prh/+Ju24hA8ShhKYy3ORQ+3u2l8EoyPUcl+EDOC2kufLbuF7AKrBDF0hXm"
 		"Lfon9nZBnfr/EpL/J1qRaM7am1s="
 	);
-
 	// CA POLITICA PERSONA FISICA - COSTA RICA v2
 	writer.String(
 		"MIIMrDCCCpSgAwIBAgITTgAAAAJzjeZ3/o5oQAAAAAAAAjANBgkqhkiG9w0BAQ0F"
@@ -473,7 +464,6 @@ bool Firmador::OnInit() {
 		"jxgCQGvTkca6RfqTr3WkMrnwZhHBvTvu0utoIRruw4vpbboFbrm6kkRbMYlA7Yop"
 		"UEBsMW+iqjp6jzifnlluqriqPuBAfmTv8ASr8JE8Ytw="
 	);
-
 	// CA RAIZ NACIONAL - COSTA RICA v2
 	writer.String(
 		"MIIFwTCCA6mgAwIBAgIQdLjPY4+rcrxGwdK6zQAFDDANBgkqhkiG9w0BAQ0FADBz"
@@ -508,13 +498,11 @@ bool Firmador::OnInit() {
 		"Bh0Fdf6Id1/KiyXO0ivm1xR7uK0mreiETRcWa7Pw2D1NllnuoIyx1gsc0eYmZnZC"
 		"5lV7VBt1xfpCyaRtmcqU7Jzvk/rl9U8rMSpaOcySGf15dGPVtQ=="
 	);
-
 	writer.EndArray();
 	writer.Key("encryptionAlgorithm");
 	writer.String(certificate.encryptionAlgorithm.c_str());
 	writer.EndObject();
 	writer.EndObject();
-
 	std::cout << stringBuffer.GetString() << std::endl;
 
 //	gnutls_free(sig.data);
@@ -532,5 +520,5 @@ bool Firmador::OnInit() {
 
 	gnutls_pkcs11_deinit();
 
-	return false;
+	return true;
 }

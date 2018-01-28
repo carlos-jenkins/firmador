@@ -19,8 +19,12 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "request.h"
 
+#define FIRMADOR_STRING(s) #s
+#define FIRMADOR_EXPAND_STRING(e) FIRMADOR_STRING(e)
+
 #include <cstring>
 #include <iostream>
+#include <string>
 
 //TODO: usar TLS con el certificado generado por el instalador
 int request_callback(void *cls, struct MHD_Connection *connection,
@@ -32,6 +36,7 @@ int request_callback(void *cls, struct MHD_Connection *connection,
 	int ret;
 	int ret_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
 	std::string page = "";
+	std::string content_type = "";
 
 	(void)cls;
 	(void)version;
@@ -44,6 +49,25 @@ int request_callback(void *cls, struct MHD_Connection *connection,
 		page = "{ \"version\": \"1.10.5\"}";
 	}
 
+	if (strcmp(url, "/nexu.js") == 0) {
+		ret_code = MHD_HTTP_OK;
+		content_type = "text/javascript;charset=utf-8";
+		page = std::string() +
+			"function nexu_get_certificates(success, error)"
+			"{"
+			"req = new XMLHttpRequest();"
+			"req.open('POST', '//localhost:"
+			FIRMADOR_EXPAND_STRING(FIRMADOR_PORT)
+			"/rest/certificates');"
+			"req.setRequestHeader('Content-Type', 'application/json');"
+			"req.send();"
+			"}"
+			"function nexu_sign_with_token_infos(success, error)"
+			"{"
+			""
+			"}";
+	}
+
 	if (strcmp(url, "/rest/certificates") == 0) {
 		if (strcmp(method, MHD_HTTP_METHOD_OPTIONS) == 0) {
 			ret_code = MHD_HTTP_OK;
@@ -51,6 +75,7 @@ int request_callback(void *cls, struct MHD_Connection *connection,
 
 		if (strcmp(method, MHD_HTTP_METHOD_POST) == 0) {
 			ret_code = MHD_HTTP_OK;
+			content_type = "application/json;charset=utf-8";
 			std::cout << "FIXME: abrir interfaz de certificados"
 				<< std::endl;
 			std::cout << "FIXME: enviar UUID, ID de certificado, "
@@ -66,6 +91,7 @@ int request_callback(void *cls, struct MHD_Connection *connection,
 
 		if (strcmp(method, MHD_HTTP_METHOD_POST) == 0) {
 			ret_code = MHD_HTTP_OK;
+			content_type = "application/json;charset=utf-8";
 			std::cout << "FIXME: abrir interfaz de solicitar PIN "
 				<< "del token y firmar el PKCS#7 "
 				<< "proporcionado con el algoritmo indicado."
@@ -80,7 +106,7 @@ int request_callback(void *cls, struct MHD_Connection *connection,
 		(void*)page.c_str(), MHD_RESPMEM_MUST_COPY);
 	if (strcmp(page.c_str(), "") != 0) {
 		MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_TYPE,
-			"application/json;charset=utf-8");
+			content_type.c_str());
 	}
 	MHD_add_response_header(response, "Access-Control-Allow-Headers",
 		MHD_HTTP_HEADER_CONTENT_TYPE);

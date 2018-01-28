@@ -33,7 +33,6 @@ int pin_callback(void *userdata, int attempt, const char *token_url,
 	(void) userdata;
 	(void) attempt;
 	(void) token_url;
-	int len;
 	wxString warning = wxT("");
 
 	if (flags & GNUTLS_PIN_FINAL_TRY) {
@@ -67,7 +66,7 @@ int pin_callback(void *userdata, int attempt, const char *token_url,
 			return -1;
 		}
 
-		len = std::min(pin_max - 1,
+		int len = std::min(pin_max - 1,
 			std::char_traits<char>::length(
 				pinDialog.GetValue().mb_str(wxConvUTF8)));
 		memcpy(pin, pinDialog.GetValue().mb_str(wxConvUTF8), len);

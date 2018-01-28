@@ -24,6 +24,8 @@ along with Firmador.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include <microhttpd.h>
 
+#define FIRMADOR_PORT 9795
+
 int request_callback(void *cls, struct MHD_Connection *connection,
 	const char *url, const char *method, const char *version,
 	const char *upload_data, std::size_t *upload_data_size,
